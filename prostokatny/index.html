@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sygnał prostokątny z sumy harmonicznych</title>
+  <style>
+    :root { color-scheme: light; font-family: Inter, Segoe UI, Arial, sans-serif; color: #14212f; background: #edf2f7; }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-width: 320px; }
+    main { max-width: 1320px; margin: 0 auto; padding: 28px; }
+    header { display: flex; align-items: end; justify-content: space-between; gap: 24px; margin-bottom: 22px; }
+    h1 { margin: 0; font-size: clamp(1.5rem, 3vw, 2rem); letter-spacing: -0.025em; }
+    header p { margin: 7px 0 0; color: #52606d; }
+    .tag { color: #1e5c8f; background: #e3f0fa; padding: 7px 10px; border-radius: 999px; font-size: .82rem; font-weight: 650; white-space: nowrap; }
+    .card { background: #fff; border: 1px solid #dce4ec; border-radius: 14px; box-shadow: 0 8px 24px rgba(35, 55, 75, .07); }
+    .chart { padding: 20px 20px 14px; overflow: hidden; }
+    .chart-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 18px; margin-bottom: 7px; }
+    h2 { font-size: 1rem; margin: 0; }
+    .unit { font-size: .78rem; color: #688093; margin-left: 7px; }
+    .formula { margin: 0; color: #526a7e; font: 1rem Georgia, serif; white-space: nowrap; }
+    .legend { display: flex; flex-wrap: wrap; gap: 9px 20px; margin: 0 0 2px; color: #405261; font-size: .8rem; font-weight: 650; }
+    .legend span::before { content: ''; display: inline-block; width: 18px; height: 3px; margin-right: 7px; vertical-align: middle; border-radius: 2px; background: currentColor; }
+    .sum-key { color: #1876a9; }
+    .ideal-key { color: #8193a0; }
+    .ideal-key::before { height: 2px !important; background: repeating-linear-gradient(90deg, currentColor 0 5px, transparent 5px 9px) !important; }
+    canvas { display: block; width: 100%; height: 440px; touch-action: none; }
+    .readout { display: flex; justify-content: space-between; gap: 12px; min-height: 18px; margin: 3px 0 0; color: #587084; font-size: .77rem; }
+    .controls { margin-top: 16px; padding: 20px; }
+    .control-row { display: grid; grid-template-columns: minmax(190px, 280px) minmax(220px, 1fr); gap: 26px; align-items: end; }
+    label { display: block; color: #405261; font-size: .82rem; font-weight: 650; }
+    input[type="number"] { display: block; width: 100%; height: 39px; margin-top: 7px; border: 1px solid #bac8d4; border-radius: 7px; padding: 6px 10px; color: #182733; background: #fff; font: inherit; }
+    .slider-wrap label { display: flex; justify-content: space-between; gap: 12px; }
+    input[type="range"] { display: block; width: 100%; margin: 13px 0 3px; accent-color: #176da5; cursor: pointer; }
+    input:focus-visible { outline: 3px solid #b9dbf3; outline-offset: 3px; }
+    .scale { display: flex; justify-content: space-between; color: #688093; font-size: .77rem; }
+    .hint { margin: 14px 0 0; color: #617688; font-size: .78rem; }
+    footer { color: #617688; font-size: .78rem; padding: 14px 3px 0; }
+    @media (max-width: 850px) {
+      main { padding: 16px; }
+      header { align-items: start; flex-direction: column; gap: 10px; }
+      .chart { padding: 16px 12px 12px; }
+      canvas { height: 350px; }
+    }
+    @media (max-width: 610px) {
+      .chart-heading { align-items: start; flex-direction: column; gap: 5px; }
+      .formula { font-size: .88rem; white-space: normal; }
+      canvas { height: 290px; }
+      .control-row { grid-template-columns: 1fr; gap: 17px; }
+      .readout { display: block; }
+      #point-readout { display: block; margin-top: 4px; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <div>
+        <h1>Sygnał prostokątny z sumy harmonicznych</h1>
+        <p>Kolejne nieparzyste harmoniczne przybliżają idealny przebieg prostokątny</p>
+      </div>
+      <div class="tag">działa bez połączenia z internetem</div>
+    </header>
+
+    <section class="card chart" aria-label="Wykres syntezy sygnału prostokątnego">
+      <div class="chart-heading">
+        <h2>Suma szeregu Fouriera <span class="unit">dwa okresy</span></h2>
+        <p class="formula">u(t) = 4/π · [sin(ωt) + sin(3ωt)/3 + sin(5ωt)/5 + ...]</p>
+      </div>
+      <p class="legend" aria-label="Legenda wykresu">
+        <span class="sum-key">Suma harmonicznych</span>
+        <span class="ideal-key">Sygnał idealny</span>
+      </p>
+      <canvas id="chart" role="img" aria-label="Przybliżenie sygnału prostokątnego sumą nieparzystych harmonicznych na odcinku dwóch okresów"></canvas>
+      <p class="readout"><span id="summary">Największa harmoniczna: 9</span><span id="point-readout">Wskaż punkt na wykresie</span></p>
+    </section>
+
+    <section class="card controls" aria-label="Sterowanie liczbą harmonicznych">
+      <div class="control-row">
+        <label for="harmonic-input">Numer największej harmonicznej
+          <input id="harmonic-input" type="number" min="1" max="99" step="2" value="9" inputmode="numeric">
+        </label>
+        <div class="slider-wrap">
+          <label for="harmonic-slider"><span>Zmień wartość suwakiem</span><strong id="harmonic-value">9</strong></label>
+          <input id="harmonic-slider" type="range" min="1" max="99" step="2" value="9">
+          <div class="scale"><span>1</span><span>99</span></div>
+        </div>
+      </div>
+      <p class="hint">Szereg zawiera harmoniczne nieparzyste od 1 do podanego numeru.</p>
+    </section>
+
+    <footer>Zmiana wartości natychmiast przelicza sumę. Przeregulowanie przy skokach jest zjawiskiem Gibbsa.</footer>
+  </main>
+
+  <script>
+    (() => {
+      const canvas = document.querySelector('#chart');
+      const input = document.querySelector('#harmonic-input');
+      const slider = document.querySelector('#harmonic-slider');
+      const valueReadout = document.querySelector('#harmonic-value');
+      const summary = document.querySelector('#summary');
+      const pointReadout = document.querySelector('#point-readout');
+      const ctx = canvas.getContext('2d');
+      const limits = { min: 1, max: 99 };
+      let largestHarmonic = 9;
+      let width = 0;
+      let height = 0;
+      let plot = null;
+
+      function normalize(value) {
+        let result = Math.round(Number(value));
+        if (!Number.isFinite(result)) result = largestHarmonic;
+        result = Math.max(limits.min, Math.min(limits.max, result));
+        if (result % 2 === 0) result += result < limits.max ? 1 : -1;
+        return result;
+      }
+
+      function squareSum(phase) {
+        let sum = 0;
+        for (let harmonic = 1; harmonic <= largestHarmonic; harmonic += 2) {
+          sum += Math.sin(harmonic * phase) / harmonic;
+        }
+        return 4 * sum / Math.PI;
+      }
+
+      function format(value, digits = 2) {
+        const safe = Math.abs(value) < 0.5 * 10 ** -digits ? 0 : value;
+        return safe.toFixed(digits).replace('.', ',');
+      }
+
+      function line(x1, y1, x2, y2, color, lineWidth = 1) {
+        ctx.strokeStyle = color;
+        ctx.lineWidth = lineWidth;
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.stroke();
+      }
+
+      function arrow(x1, y1, x2, y2, color, lineWidth = 1.2) {
+        line(x1, y1, x2, y2, color, lineWidth);
+        const direction = Math.atan2(y2 - y1, x2 - x1);
+        const length = 8;
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.moveTo(x2, y2);
+        ctx.lineTo(x2 - length * Math.cos(direction - Math.PI / 6), y2 - length * Math.sin(direction - Math.PI / 6));
+        ctx.lineTo(x2 - length * Math.cos(direction + Math.PI / 6), y2 - length * Math.sin(direction + Math.PI / 6));
+        ctx.closePath();
+        ctx.fill();
+      }
+
+      function draw() {
+        if (!width || !height) return;
+        ctx.clearRect(0, 0, width, height);
+        const compact = width < 610;
+        const margin = { left: compact ? 42 : 58, right: compact ? 12 : 24, top: 20, bottom: 46 };
+        const plotWidth = width - margin.left - margin.right;
+        const plotHeight = height - margin.top - margin.bottom;
+        const yMin = -1.35;
+        const yMax = 1.35;
+        const x = phase => margin.left + phase / (4 * Math.PI) * plotWidth;
+        const y = amplitude => margin.top + (yMax - amplitude) / (yMax - yMin) * plotHeight;
+        plot = { left: margin.left, right: margin.left + plotWidth, top: margin.top, bottom: margin.top + plotHeight, width: plotWidth, x, y };
+
+        ctx.font = compact ? '10px Segoe UI, Arial' : '12px Segoe UI, Arial';
+        ctx.fillStyle = '#627b8d';
+        ctx.textBaseline = 'middle';
+
+        [-1, -.5, 0, .5, 1].forEach(level => {
+          const py = y(level);
+          line(margin.left, py, margin.left + plotWidth, py, level === 0 ? '#bdcad4' : '#e6edf3');
+          ctx.textAlign = 'right';
+          ctx.fillText(format(level, 1), margin.left - 8, py);
+        });
+
+        const xTicks = [
+          { phase: 0, label: '0' },
+          { phase: Math.PI, label: 'T/2' },
+          { phase: 2 * Math.PI, label: 'T' },
+          { phase: 3 * Math.PI, label: '3T/2' },
+          { phase: 4 * Math.PI, label: '2T' }
+        ];
+        xTicks.forEach(tick => {
+          const px = x(tick.phase);
+          line(px, margin.top, px, margin.top + plotHeight, tick.phase === 0 ? '#bdcad4' : '#e6edf3');
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'top';
+          ctx.fillText(tick.label, px, margin.top + plotHeight + 10);
+        });
+
+        arrow(margin.left, y(0), margin.left + plotWidth + 5, y(0), '#8da4b5');
+        arrow(margin.left, margin.top + plotHeight, margin.left, margin.top - 5, '#8da4b5');
+        ctx.fillStyle = '#627b8d';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'bottom';
+        ctx.fillText('u(t)', margin.left + 9, margin.top + 1);
+        ctx.textAlign = 'right';
+        ctx.fillText('t', margin.left + plotWidth, y(0) - 7);
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(margin.left, margin.top, plotWidth, plotHeight);
+        ctx.clip();
+
+        ctx.strokeStyle = '#8193a0';
+        ctx.lineWidth = 1.7;
+        ctx.setLineDash([6, 5]);
+        ctx.beginPath();
+        ctx.moveTo(x(0), y(0));
+        ctx.lineTo(x(0), y(1));
+        ctx.lineTo(x(Math.PI), y(1));
+        ctx.lineTo(x(Math.PI), y(-1));
+        ctx.lineTo(x(2 * Math.PI), y(-1));
+        ctx.lineTo(x(2 * Math.PI), y(1));
+        ctx.lineTo(x(3 * Math.PI), y(1));
+        ctx.lineTo(x(3 * Math.PI), y(-1));
+        ctx.lineTo(x(4 * Math.PI), y(-1));
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        ctx.strokeStyle = '#1876a9';
+        ctx.lineWidth = 2.7;
+        ctx.lineJoin = 'round';
+        ctx.beginPath();
+        const samples = Math.max(1200, Math.ceil(plotWidth * 2));
+        for (let index = 0; index <= samples; index++) {
+          const phase = 4 * Math.PI * index / samples;
+          const px = x(phase);
+          const py = y(squareSum(phase));
+          if (index === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        }
+        ctx.stroke();
+        ctx.restore();
+
+        const terms = (largestHarmonic + 1) / 2;
+        summary.textContent = `Największa harmoniczna: ${largestHarmonic} · liczba składników: ${terms}`;
+      }
+
+      function sizeCanvas() {
+        const bounds = canvas.getBoundingClientRect();
+        const ratio = window.devicePixelRatio || 1;
+        width = Math.max(280, bounds.width);
+        height = bounds.height;
+        canvas.width = Math.round(width * ratio);
+        canvas.height = Math.round(height * ratio);
+        ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+        draw();
+      }
+
+      function setHarmonic(value) {
+        largestHarmonic = normalize(value);
+        input.value = largestHarmonic;
+        slider.value = largestHarmonic;
+        valueReadout.textContent = largestHarmonic;
+        draw();
+      }
+
+      function showPoint(event) {
+        if (!plot) return;
+        const bounds = canvas.getBoundingClientRect();
+        const px = Math.max(plot.left, Math.min(plot.right, event.clientX - bounds.left));
+        const phase = (px - plot.left) / plot.width * 4 * Math.PI;
+        const periods = phase / (2 * Math.PI);
+        pointReadout.textContent = `t/T = ${format(periods, 3)}, u(t) = ${format(squareSum(phase), 3)}`;
+      }
+
+      slider.addEventListener('input', () => setHarmonic(slider.value));
+      input.addEventListener('change', () => setHarmonic(input.value));
+      input.addEventListener('keydown', event => {
+        if (event.key === 'Enter') {
+          setHarmonic(input.value);
+          input.blur();
+        }
+      });
+      canvas.addEventListener('pointermove', showPoint);
+      canvas.addEventListener('pointerleave', () => { pointReadout.textContent = 'Wskaż punkt na wykresie'; });
+      if ('ResizeObserver' in window) new ResizeObserver(sizeCanvas).observe(canvas);
+      else window.addEventListener('resize', sizeCanvas);
+      sizeCanvas();
+    })();
+  </script>
+</body>
+</html>

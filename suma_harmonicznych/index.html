@@ -1,0 +1,413 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Budowanie przebiegu z harmonicznych</title>
+  <style>
+    :root { color-scheme: light; font-family: Inter, Segoe UI, Arial, sans-serif; color: #14212f; background: #edf2f7; }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-width: 320px; }
+    main { max-width: 1320px; margin: 0 auto; padding: 28px; }
+    header { display: flex; align-items: end; justify-content: space-between; gap: 24px; margin-bottom: 22px; }
+    h1 { margin: 0; font-size: clamp(1.5rem, 3vw, 2rem); letter-spacing: -0.025em; }
+    header p { margin: 7px 0 0; color: #52606d; }
+    .tag { color: #1e5c8f; background: #e3f0fa; padding: 7px 10px; border-radius: 999px; font-size: .82rem; font-weight: 650; white-space: nowrap; }
+    .card { background: #fff; border: 1px solid #dce4ec; border-radius: 14px; box-shadow: 0 8px 24px rgba(35, 55, 75, .07); }
+    .chart { padding: 20px 20px 14px; overflow: hidden; }
+    .chart-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 18px; margin-bottom: 7px; }
+    h2 { font-size: 1rem; margin: 0; }
+    .unit { font-size: .78rem; color: #688093; margin-left: 7px; }
+    .formula { margin: 0; color: #526a7e; font: 1rem Georgia, serif; white-space: nowrap; }
+    .legend { display: flex; flex-wrap: wrap; align-items: center; gap: 9px 20px; min-height: 24px; margin: 0 0 2px; color: #405261; font-size: .8rem; font-weight: 650; }
+    .legend span::before { content: ''; display: inline-block; width: 18px; height: 3px; margin-right: 7px; vertical-align: middle; border-radius: 2px; background: currentColor; }
+    .sum-key { color: #1876a9; }
+    .component-key { color: #a8b6c1; }
+    canvas { display: block; width: 100%; height: 420px; touch-action: none; }
+    .readout { display: flex; justify-content: space-between; gap: 12px; min-height: 18px; margin: 3px 0 0; color: #587084; font-size: .77rem; }
+    .editor { display: grid; grid-template-columns: minmax(245px, 310px) minmax(0, 1fr); gap: 16px; margin-top: 16px; }
+    .settings, .harmonics { padding: 20px; }
+    .settings h2, .harmonics h2 { margin-bottom: 15px; }
+    label { display: block; color: #405261; font-size: .82rem; font-weight: 650; }
+    .field + .field { margin-top: 14px; }
+    input[type="number"] { width: 100%; height: 37px; margin-top: 6px; border: 1px solid #bac8d4; border-radius: 7px; padding: 6px 9px; color: #182733; background: #fff; font: inherit; }
+    input:disabled { color: #8797a3; background: #f1f4f6; border-color: #dce4ea; }
+    input:focus-visible { outline: 3px solid #b9dbf3; border-color: #2878ae; }
+    .check { display: flex; align-items: center; gap: 9px; margin-top: 18px; cursor: pointer; }
+    .check input { width: 17px; height: 17px; accent-color: #176da5; }
+    .check span { color: #405261; font-size: .82rem; font-weight: 650; }
+    button { width: 100%; margin-top: 19px; border: 0; border-radius: 8px; padding: 10px 13px; color: #31516a; background: #eaf1f6; cursor: pointer; font: inherit; font-weight: 700; }
+    button:hover { background: #dce9f2; }
+    .hint { margin: 13px 0 0; color: #617688; font-size: .78rem; line-height: 1.5; }
+    .table-wrap { max-height: 315px; overflow: auto; border: 1px solid #e0e7ed; border-radius: 9px; }
+    table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+    th { position: sticky; top: 0; z-index: 1; padding: 9px 10px; color: #405261; background: #f4f7f9; border-bottom: 1px solid #dce4ec; text-align: left; font-size: .77rem; }
+    td { padding: 7px 10px; border-bottom: 1px solid #e8eef2; color: #334a5c; font-size: .83rem; }
+    tr:last-child td { border-bottom: 0; }
+    th:first-child, td:first-child { width: 22%; text-align: center; }
+    td input { margin: 0 !important; }
+    .harmonic-number { font: italic 1rem Georgia, serif; }
+    .table-note { margin: 10px 1px 0; color: #617688; font-size: .77rem; }
+    footer { color: #617688; font-size: .78rem; padding: 14px 3px 0; }
+    @media (max-width: 850px) {
+      main { padding: 16px; }
+      header { align-items: start; flex-direction: column; gap: 10px; }
+      .chart { padding: 16px 12px 12px; }
+      canvas { height: 350px; }
+      .editor { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 560px) {
+      .chart-heading { align-items: start; flex-direction: column; gap: 5px; }
+      .formula { font-size: .88rem; white-space: normal; }
+      canvas { height: 285px; }
+      .readout { display: block; }
+      #point-readout { display: block; margin-top: 4px; }
+      .settings, .harmonics { padding: 16px; }
+      th, td { padding-inline: 6px; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <div>
+        <h1>Budowanie przebiegu z harmonicznych</h1>
+        <p>Ustal liczbę składowych, a następnie wpisz amplitudę i fazę każdej z nich</p>
+      </div>
+      <div class="tag">działa bez połączenia z internetem</div>
+    </header>
+
+    <section class="card chart" aria-label="Wykres sumy harmonicznych">
+      <div class="chart-heading">
+        <h2>Przebieg wypadkowy <span class="unit">przedział od −T do T</span></h2>
+        <p class="formula">u(t) = A<sub>0</sub> + Σ A<sub>n</sub> sin(nω<sub>0</sub>t + φ<sub>n</sub>)</p>
+      </div>
+      <p class="legend" aria-label="Legenda wykresu">
+        <span class="sum-key">Suma harmonicznych</span>
+        <span class="component-key" id="component-key">Poszczególne składowe</span>
+      </p>
+      <canvas id="chart" role="img" aria-label="Wykres przebiegu zbudowanego z zadanych harmonicznych, z osią pionową pośrodku"></canvas>
+      <p class="readout"><span id="summary">Liczba harmonicznych: 5</span><span id="point-readout">Wskaż punkt na wykresie</span></p>
+    </section>
+
+    <div class="editor">
+      <section class="card settings" aria-label="Parametry ogólne">
+        <h2>Parametry ogólne</h2>
+        <label class="field" for="count">Liczba harmonicznych
+          <input id="count" type="number" min="1" max="20" step="1" value="5" inputmode="numeric">
+        </label>
+        <label class="field" for="frequency">Częstotliwość podstawowa f₀ [Hz]
+          <input id="frequency" type="number" min="0.01" max="1000" step="0.01" value="1" inputmode="decimal">
+        </label>
+        <label class="check" for="show-components">
+          <input id="show-components" type="checkbox" checked>
+          <span>Pokaż poszczególne składowe</span>
+        </label>
+        <button id="reset" type="button">Przywróć przykład</button>
+        <p class="hint">Numer wiersza określa krotność częstotliwości podstawowej. Wartość fazy podawaj w stopniach.</p>
+      </section>
+
+      <section class="card harmonics" aria-label="Wartości harmonicznych">
+        <h2>Wartości harmonicznych</h2>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Numer n</th><th>Wartość Aₙ</th><th>Faza φₙ [°]</th></tr></thead>
+            <tbody id="harmonic-rows"></tbody>
+          </table>
+        </div>
+        <p class="table-note">Każda zmiana wartości jest od razu widoczna na wykresie.</p>
+      </section>
+    </div>
+
+    <footer>Oś OY odpowiada chwili t = 0 i pozostaje na środku wykresu niezależnie od liczby harmonicznych.</footer>
+  </main>
+
+  <script>
+    (() => {
+      const canvas = document.querySelector('#chart');
+      const ctx = canvas.getContext('2d');
+      const countInput = document.querySelector('#count');
+      const frequencyInput = document.querySelector('#frequency');
+      const showComponentsInput = document.querySelector('#show-components');
+      const rows = document.querySelector('#harmonic-rows');
+      const summary = document.querySelector('#summary');
+      const pointReadout = document.querySelector('#point-readout');
+      const componentKey = document.querySelector('#component-key');
+      const defaults = [
+        { amplitude: 1, phase: 0 },
+        { amplitude: 0, phase: 0 },
+        { amplitude: 0.333, phase: 0 },
+        { amplitude: 0, phase: 0 },
+        { amplitude: 0.2, phase: 0 }
+      ];
+      const colors = ['#d36c6c', '#65a47b', '#a27ab5', '#db9853', '#5d9bb2', '#b98b62', '#7f8fc4', '#8eaa62'];
+      const defaultDC = 0;
+      let dc = defaultDC;
+      let harmonics = defaults.map(item => ({ ...item }));
+      let width = 0;
+      let height = 0;
+      let plot = null;
+
+      function clampInteger(value, min, max, fallback) {
+        const number = Math.round(Number(value));
+        return Number.isFinite(number) ? Math.max(min, Math.min(max, number)) : fallback;
+      }
+
+      function finiteNumber(value, fallback = 0) {
+        const number = Number(value);
+        return Number.isFinite(number) ? number : fallback;
+      }
+
+      function format(value, digits = 3) {
+        const safe = Math.abs(value) < 0.5 * 10 ** -digits ? 0 : value;
+        return safe.toFixed(digits).replace('.', ',');
+      }
+
+      function rebuildRows() {
+        rows.replaceChildren();
+        const dcRow = document.createElement('tr');
+        dcRow.innerHTML = `<td class="harmonic-number">0</td>
+          <td><input type="number" step="any" value="${dc}" data-index="dc" data-key="amplitude" aria-label="Wartość składowej stałej"></td>
+          <td><input type="text" value="nie dotyczy" aria-label="Składowa stała nie ma fazy" disabled></td>`;
+        rows.append(dcRow);
+        harmonics.forEach((harmonic, index) => {
+          const row = document.createElement('tr');
+          row.innerHTML = `<td class="harmonic-number">${index + 1}</td>
+            <td><input type="number" step="any" value="${harmonic.amplitude}" data-index="${index}" data-key="amplitude" aria-label="Amplituda harmonicznej ${index + 1}"></td>
+            <td><input type="number" step="any" value="${harmonic.phase}" data-index="${index}" data-key="phase" aria-label="Faza harmonicznej ${index + 1} w stopniach"></td>`;
+          rows.append(row);
+        });
+      }
+
+      function setCount(rawValue) {
+        const count = clampInteger(rawValue, 1, 20, harmonics.length);
+        while (harmonics.length < count) harmonics.push({ amplitude: 0, phase: 0 });
+        harmonics.length = count;
+        countInput.value = count;
+        rebuildRows();
+        draw();
+      }
+
+      function componentValue(index, normalizedTime) {
+        const item = harmonics[index];
+        const phase = item.phase * Math.PI / 180;
+        return item.amplitude * Math.sin(2 * Math.PI * (index + 1) * normalizedTime + phase);
+      }
+
+      function sumValue(normalizedTime) {
+        return dc + harmonics.reduce((sum, item, index) => sum + componentValue(index, normalizedTime), 0);
+      }
+
+      function line(x1, y1, x2, y2, color, lineWidth = 1) {
+        ctx.strokeStyle = color;
+        ctx.lineWidth = lineWidth;
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.stroke();
+      }
+
+      function arrow(x1, y1, x2, y2, color, lineWidth = 1.2) {
+        line(x1, y1, x2, y2, color, lineWidth);
+        const direction = Math.atan2(y2 - y1, x2 - x1);
+        const length = 8;
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.moveTo(x2, y2);
+        ctx.lineTo(x2 - length * Math.cos(direction - Math.PI / 6), y2 - length * Math.sin(direction - Math.PI / 6));
+        ctx.lineTo(x2 - length * Math.cos(direction + Math.PI / 6), y2 - length * Math.sin(direction + Math.PI / 6));
+        ctx.closePath();
+        ctx.fill();
+      }
+
+      function niceStep(span, targetTicks = 6) {
+        const raw = span / targetTicks;
+        const power = 10 ** Math.floor(Math.log10(raw || 1));
+        const fraction = raw / power;
+        return (fraction < 1.5 ? 1 : fraction < 3 ? 2 : fraction < 7 ? 5 : 10) * power;
+      }
+
+      function draw() {
+        if (!width || !height) return;
+        ctx.clearRect(0, 0, width, height);
+        const compact = width < 610;
+        const margin = { left: compact ? 45 : 61, right: compact ? 12 : 24, top: 20, bottom: 46 };
+        const plotWidth = width - margin.left - margin.right;
+        const plotHeight = height - margin.top - margin.bottom;
+        const sampleCount = Math.max(1000, Math.ceil(plotWidth * 2));
+        let largest = 0;
+        for (let index = 0; index <= sampleCount; index++) {
+          const normalizedTime = -1 + 2 * index / sampleCount;
+          largest = Math.max(largest, Math.abs(sumValue(normalizedTime)));
+        }
+        largest = Math.max(1, largest * 1.12);
+        const step = niceStep(2 * largest);
+        const yMax = Math.ceil(largest / step) * step;
+        const yMin = -yMax;
+        const x = normalizedTime => margin.left + (normalizedTime + 1) / 2 * plotWidth;
+        const y = value => margin.top + (yMax - value) / (yMax - yMin) * plotHeight;
+        plot = { left: margin.left, right: margin.left + plotWidth, top: margin.top, bottom: margin.top + plotHeight, width: plotWidth, x, y };
+
+        ctx.font = compact ? '10px Segoe UI, Arial' : '12px Segoe UI, Arial';
+        ctx.fillStyle = '#627b8d';
+        ctx.textBaseline = 'middle';
+        for (let value = yMin; value <= yMax + step * .1; value += step) {
+          const py = y(value);
+          line(margin.left, py, margin.left + plotWidth, py, Math.abs(value) < step * .1 ? '#bdcad4' : '#e6edf3');
+          ctx.textAlign = 'right';
+          ctx.fillText(format(value, Math.abs(step) < 1 ? 2 : 1), margin.left - 8, py);
+        }
+
+        const ticks = [
+          { value: -1, label: '−T' },
+          { value: -.5, label: '−T/2' },
+          { value: 0, label: '0' },
+          { value: .5, label: 'T/2' },
+          { value: 1, label: 'T' }
+        ];
+        ticks.forEach(tick => {
+          const px = x(tick.value);
+          line(px, margin.top, px, margin.top + plotHeight, tick.value === 0 ? '#91a4b3' : '#e6edf3', tick.value === 0 ? 1.5 : 1);
+          ctx.fillStyle = '#627b8d';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'top';
+          ctx.fillText(tick.label, px, margin.top + plotHeight + 10);
+        });
+
+        arrow(margin.left, y(0), margin.left + plotWidth + 5, y(0), '#8da4b5');
+        arrow(x(0), margin.top + plotHeight, x(0), margin.top - 5, '#6f8799', 1.5);
+        ctx.fillStyle = '#526a7e';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'bottom';
+        ctx.fillText('u(t)', x(0) + 9, margin.top + 1);
+        ctx.textAlign = 'right';
+        ctx.fillText('t', margin.left + plotWidth, y(0) - 7);
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(margin.left, margin.top, plotWidth, plotHeight);
+        ctx.clip();
+
+        if (showComponentsInput.checked) {
+          ctx.strokeStyle = '#7f8fc4';
+          ctx.globalAlpha = .55;
+          ctx.lineWidth = 1.3;
+          ctx.beginPath();
+          ctx.moveTo(x(-1), y(dc));
+          ctx.lineTo(x(1), y(dc));
+          ctx.stroke();
+          harmonics.forEach((item, harmonicIndex) => {
+            ctx.strokeStyle = colors[harmonicIndex % colors.length];
+            ctx.globalAlpha = .46;
+            ctx.lineWidth = 1.15;
+            ctx.beginPath();
+            for (let index = 0; index <= sampleCount; index++) {
+              const normalizedTime = -1 + 2 * index / sampleCount;
+              const px = x(normalizedTime);
+              const py = y(componentValue(harmonicIndex, normalizedTime));
+              if (index === 0) ctx.moveTo(px, py);
+              else ctx.lineTo(px, py);
+            }
+            ctx.stroke();
+          });
+        }
+
+        ctx.globalAlpha = 1;
+        ctx.strokeStyle = '#1876a9';
+        ctx.lineWidth = 2.8;
+        ctx.lineJoin = 'round';
+        ctx.beginPath();
+        for (let index = 0; index <= sampleCount; index++) {
+          const normalizedTime = -1 + 2 * index / sampleCount;
+          const px = x(normalizedTime);
+          const py = y(sumValue(normalizedTime));
+          if (index === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        }
+        ctx.stroke();
+        ctx.restore();
+
+        const frequency = Math.max(.01, finiteNumber(frequencyInput.value, 1));
+        summary.textContent = `Składowa stała A₀ = ${format(dc, 2)} · harmoniczne: ${harmonics.length} · f₀ = ${format(frequency, 2)} Hz`;
+        componentKey.hidden = !showComponentsInput.checked;
+      }
+
+      function sizeCanvas() {
+        const bounds = canvas.getBoundingClientRect();
+        const ratio = window.devicePixelRatio || 1;
+        width = Math.max(280, bounds.width);
+        height = bounds.height;
+        canvas.width = Math.round(width * ratio);
+        canvas.height = Math.round(height * ratio);
+        ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+        draw();
+      }
+
+      function showPoint(event) {
+        if (!plot) return;
+        const bounds = canvas.getBoundingClientRect();
+        const px = Math.max(plot.left, Math.min(plot.right, event.clientX - bounds.left));
+        const normalizedTime = -1 + 2 * (px - plot.left) / plot.width;
+        pointReadout.textContent = `t/T = ${format(normalizedTime, 3)}, u(t) = ${format(sumValue(normalizedTime), 3)}`;
+      }
+
+      rows.addEventListener('input', event => {
+        const target = event.target;
+        if (!target.matches('input[data-index]')) return;
+        if (target.dataset.index === 'dc') {
+          dc = finiteNumber(target.value, 0);
+          draw();
+          return;
+        }
+        const index = Number(target.dataset.index);
+        const key = target.dataset.key;
+        harmonics[index][key] = finiteNumber(target.value, 0);
+        draw();
+      });
+      rows.addEventListener('change', event => {
+        const target = event.target;
+        if (!target.matches('input[data-index]')) return;
+        if (target.dataset.index === 'dc') {
+          dc = finiteNumber(target.value, 0);
+          target.value = dc;
+          draw();
+          return;
+        }
+        const index = Number(target.dataset.index);
+        const key = target.dataset.key;
+        harmonics[index][key] = finiteNumber(target.value, 0);
+        target.value = harmonics[index][key];
+        draw();
+      });
+      countInput.addEventListener('change', () => setCount(countInput.value));
+      countInput.addEventListener('keydown', event => {
+        if (event.key === 'Enter') {
+          setCount(countInput.value);
+          countInput.blur();
+        }
+      });
+      frequencyInput.addEventListener('input', draw);
+      frequencyInput.addEventListener('change', () => {
+        frequencyInput.value = Math.max(.01, finiteNumber(frequencyInput.value, 1));
+        draw();
+      });
+      showComponentsInput.addEventListener('change', draw);
+      document.querySelector('#reset').addEventListener('click', () => {
+        dc = defaultDC;
+        harmonics = defaults.map(item => ({ ...item }));
+        countInput.value = harmonics.length;
+        frequencyInput.value = 1;
+        showComponentsInput.checked = true;
+        rebuildRows();
+        draw();
+      });
+      canvas.addEventListener('pointermove', showPoint);
+      canvas.addEventListener('pointerleave', () => { pointReadout.textContent = 'Wskaż punkt na wykresie'; });
+      rebuildRows();
+      if ('ResizeObserver' in window) new ResizeObserver(sizeCanvas).observe(canvas);
+      else window.addEventListener('resize', sizeCanvas);
+      sizeCanvas();
+    })();
+  </script>
+</body>
+</html>

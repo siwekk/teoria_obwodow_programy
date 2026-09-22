@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Charakterystyki częstotliwościowe</title>
+  <style>
+    :root { color-scheme: light; font-family: Inter, Segoe UI, Arial, sans-serif; color: #14212f; background: #edf2f7; }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-width: 320px; }
+    main { max-width: 1320px; margin: 0 auto; padding: 28px; }
+    header { display: flex; align-items: end; justify-content: space-between; gap: 24px; margin-bottom: 22px; }
+    h1 { margin: 0; font-size: clamp(1.5rem, 3vw, 2rem); letter-spacing: -0.025em; }
+    header p { margin: 7px 0 0; color: #52606d; }
+    .tag { color: #1e5c8f; background: #e3f0fa; padding: 7px 10px; border-radius: 999px; font-size: .82rem; font-weight: 650; white-space: nowrap; }
+    .layout { display: grid; grid-template-columns: minmax(290px, 370px) minmax(0, 1fr); gap: 22px; align-items: start; }
+    .card { background: #fff; border: 1px solid #dce4ec; border-radius: 14px; box-shadow: 0 8px 24px rgba(35, 55, 75, .07); }
+    .controls { padding: 20px; position: sticky; top: 16px; }
+    h2 { font-size: 1rem; margin: 0 0 14px; }
+    .formula { margin: 0 0 19px; font-family: Georgia, serif; text-align: center; color: #293845; padding: 13px 7px; border-block: 1px solid #e6edf3; line-height: 1.8; }
+    .formula .fraction { display: inline-flex; flex-direction: column; vertical-align: middle; text-align: center; line-height: 1.25; }
+    .formula .top { border-bottom: 1px solid currentColor; padding: 0 7px 3px; }
+    .formula .bottom { padding-top: 3px; }
+    .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    label { display: block; color: #405261; font-size: .82rem; font-weight: 650; }
+    input, select { width: 100%; margin-top: 6px; height: 35px; border: 1px solid #bac8d4; border-radius: 7px; padding: 6px 9px; color: #182733; background: #fff; font: inherit; }
+    input:focus, select:focus { outline: 3px solid #b9dbf3; border-color: #2878ae; }
+    input:disabled { background: #f2f5f7; border-color: #e0e7ec; color: #a5b0b9; }
+    fieldset { margin: 18px 0 0; padding: 0; border: 0; }
+    legend { padding: 0; font-size: .87rem; font-weight: 750; color: #283c4d; }
+    .coefficients { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 12px; margin-top: 10px; }
+    .coefficient { display: grid; grid-template-columns: 28px 1fr; align-items: end; gap: 5px; }
+    .coefficient span { padding-bottom: 9px; color: #526a7e; font: italic 1rem Georgia, serif; }
+    .coefficient input { margin: 0; }
+    .buttons { display: flex; gap: 10px; margin-top: 21px; }
+    button { cursor: pointer; border: 0; border-radius: 8px; padding: 10px 13px; font: inherit; font-weight: 700; }
+    #draw { color: white; background: #176da5; flex: 1; }
+    #draw:hover { background: #115b8c; }
+    #reset { color: #31516a; background: #eaf1f6; }
+    .notice { min-height: 18px; margin: 11px 0 0; font-size: .8rem; color: #b42318; }
+    .chart-area { display: grid; gap: 16px; }
+    .chart { padding: 15px 15px 10px; min-height: 255px; overflow: hidden; }
+    .chart-heading { display: flex; align-items: baseline; gap: 8px; margin-bottom: 8px; }
+    .chart h2 { margin: 0; }
+    .unit { font-size: .78rem; color: #688093; }
+    canvas { display: block; width: 100%; height: 205px; touch-action: none; }
+    .readout { height: 17px; margin: 3px 0 0; color: #587084; font-size: .77rem; }
+    footer { color: #617688; font-size: .78rem; padding: 14px 3px 0; }
+    @media (max-width: 850px) { main { padding: 16px; } header { align-items: start; flex-direction: column; gap: 10px; } .layout { grid-template-columns: 1fr; } .controls { position: static; } }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <div><h1>Charakterystyki częstotliwościowe</h1><p>Transmitancja operatorowa układu liniowego</p></div>
+      <div class="tag">działa bez połączenia z internetem</div>
+    </header>
+    <div class="layout">
+      <section class="card controls" aria-label="Parametry transmitancji">
+        <h2>Transmitancja</h2>
+        <p class="formula"><i>T</i>(<i>s</i>) = <span class="fraction"><span class="top">b<sub>m</sub>s<sup>m</sup> + ... + b<sub>1</sub>s + b<sub>0</sub></span><span class="bottom">a<sub>n</sub>s<sup>n</sup> + ... + a<sub>1</sub>s + a<sub>0</sub></span></span></p>
+        <div class="field-row">
+          <label>Stopień licznika<select id="numDegree" aria-label="Stopień licznika"></select></label>
+          <label>Stopień mianownika<select id="denDegree" aria-label="Stopień mianownika"></select></label>
+        </div>
+        <fieldset><legend>Współczynniki licznika b</legend><div class="coefficients" id="numerator"></div></fieldset>
+        <fieldset><legend>Współczynniki mianownika a</legend><div class="coefficients" id="denominator"></div></fieldset>
+        <fieldset><legend>Zakres częstotliwości</legend><div class="field-row"><label>Początkowa [Hz]<input id="startHz" type="number" value="0" min="0" step="any"></label><label>Końcowa [Hz]<input id="endHz" type="number" value="10000" min="0" step="any"></label></div></fieldset>
+        <div class="buttons"><button id="draw" type="button">Rysuj charakterystyki</button><button id="reset" type="button">Domyślne</button></div>
+        <p class="notice" id="notice" role="alert"></p>
+      </section>
+      <section class="chart-area" aria-label="Wykresy charakterystyk">
+        <article class="card chart"><div class="chart-heading"><h2>Charakterystyka amplitudowa</h2><span class="unit">|T(jω)|</span></div><canvas id="amp" aria-label="Wykres charakterystyki amplitudowej"></canvas><p class="readout" id="ampReadout"></p></article>
+        <article class="card chart"><div class="chart-heading"><h2>Charakterystyka logarytmiczna</h2><span class="unit">20 log₁₀ |T(jω)| [dB]</span></div><canvas id="db" aria-label="Wykres charakterystyki w decybelach"></canvas><p class="readout" id="dbReadout"></p></article>
+        <article class="card chart"><div class="chart-heading"><h2>Charakterystyka fazowa</h2><span class="unit">∠T(jω) [°]</span></div><canvas id="phase" aria-label="Wykres charakterystyki fazowej"></canvas><p class="readout" id="phaseReadout"></p></article>
+      </section>
+    </div>
+    <footer>Współczynniki wpisuj od wyrazu stałego: b₀, b₁, ... oraz a₀, a₁, ... .</footer>
+  </main>
+  <script>
+    (() => {
+      const maxDegree = 6;
+      const defaults = { num: 4, den: 4, b: [.287, 0, .082, 0, .003, 0, 0], a: [.322, .778, 1.487, .945, 1, 0, 0], start: 0, end: 1.2 };
+      const els = { num: document.querySelector('#numDegree'), den: document.querySelector('#denDegree'), numerator: document.querySelector('#numerator'), denominator: document.querySelector('#denominator'), start: document.querySelector('#startHz'), end: document.querySelector('#endHz'), notice: document.querySelector('#notice') };
+      const charts = [{ canvas: document.querySelector('#amp'), readout: document.querySelector('#ampReadout'), key: 'amplitude' }, { canvas: document.querySelector('#db'), readout: document.querySelector('#dbReadout'), key: 'db' }, { canvas: document.querySelector('#phase'), readout: document.querySelector('#phaseReadout'), key: 'phase' }];
+      let response = [];
+      for (let i = 0; i <= maxDegree; i++) { els.num.add(new Option(i, i)); els.den.add(new Option(i, i)); }
+      function coefficientInputs(container, letter) {
+        for (let i = 0; i <= maxDegree; i++) {
+          const wrap = document.createElement('label'); wrap.className = 'coefficient';
+          wrap.innerHTML = `<span>${letter}<sub>${i}</sub></span><input type="number" step="any" value="0" aria-label="Współczynnik ${letter}${i}">`;
+          container.append(wrap);
+        }
+      }
+      coefficientInputs(els.numerator, 'b'); coefficientInputs(els.denominator, 'a');
+      function inputs(container) { return [...container.querySelectorAll('input')]; }
+      function updateEnabled() {
+        inputs(els.numerator).forEach((input, i) => input.disabled = i > +els.num.value);
+        inputs(els.denominator).forEach((input, i) => input.disabled = i > +els.den.value);
+      }
+      function setDefaults() {
+        els.num.value = defaults.num; els.den.value = defaults.den; els.start.value = defaults.start; els.end.value = defaults.end;
+        inputs(els.numerator).forEach((input, i) => input.value = defaults.b[i]);
+        inputs(els.denominator).forEach((input, i) => input.value = defaults.a[i]);
+        updateEnabled(); draw();
+      }
+      function coefficients(container, degree) { return inputs(container).slice(0, degree + 1).map(input => Number(input.value)); }
+      function polyAt(coeffs, omega) {
+        let re = 0, im = 0;
+        for (let i = 0; i < coeffs.length; i++) { const term = coeffs[i] * omega ** i; re += term * Math.cos(i * Math.PI / 2); im += term * Math.sin(i * Math.PI / 2); }
+        return { re, im };
+      }
+      function format(value) { const abs = Math.abs(value); return abs >= 10000 || (abs > 0 && abs < .001) ? value.toExponential(2) : value.toPrecision(4); }
+      function draw() {
+        const start = Number(els.start.value), end = Number(els.end.value), numDegree = +els.num.value, denDegree = +els.den.value;
+        const b = coefficients(els.numerator, numDegree), a = coefficients(els.denominator, denDegree);
+        if (!Number.isFinite(start) || !Number.isFinite(end) || start < 0 || end <= start || ![...a, ...b].every(Number.isFinite) || a.every(x => x === 0)) { els.notice.textContent = 'Podaj poprawny zakres, dodatnią częstotliwość końcową i współczynniki.'; return; }
+        els.notice.textContent = '';
+        const samples = 800; response = []; let previousPhase;
+        for (let k = 0; k <= samples; k++) {
+          const f = start + (end - start) * k / samples, omega = 2 * Math.PI * f, n = polyAt(b, omega), d = polyAt(a, omega);
+          const denMag = Math.hypot(d.re, d.im); let amplitude = denMag === 0 ? NaN : Math.hypot(n.re, n.im) / denMag;
+          let phase = Math.atan2(n.im, n.re) - Math.atan2(d.im, d.re);
+          if (previousPhase !== undefined) { while (phase - previousPhase > Math.PI) phase -= 2 * Math.PI; while (phase - previousPhase < -Math.PI) phase += 2 * Math.PI; }
+          previousPhase = phase;
+          response.push({ f, amplitude, db: amplitude > 0 ? 20 * Math.log10(amplitude) : NaN, phase: phase * 180 / Math.PI });
+        }
+        charts.forEach(renderChart);
+      }
+      function ticks(min, max) { const span = max - min || 1, raw = span / 5, power = 10 ** Math.floor(Math.log10(raw)), fraction = raw / power, nice = (fraction < 1.5 ? 1 : fraction < 3 ? 2 : fraction < 7 ? 5 : 10) * power, first = Math.ceil(min / nice) * nice, result = []; for (let x = first; x <= max + nice * .01; x += nice) result.push(x); return result; }
+      function renderChart(chart) {
+        const { canvas, readout, key } = chart, rect = canvas.getBoundingClientRect(), ratio = devicePixelRatio || 1, width = Math.max(260, Math.round(rect.width)), height = Math.round(rect.height);
+        canvas.width = width * ratio; canvas.height = height * ratio; const ctx = canvas.getContext('2d'); ctx.scale(ratio, ratio); ctx.clearRect(0, 0, width, height);
+        const values = response.map(p => p[key]).filter(Number.isFinite); if (!values.length) { readout.textContent = 'Brak danych do narysowania.'; return; }
+        let min = Math.min(...values), max = Math.max(...values), pad = (max - min) * .08; if (pad === 0) pad = Math.max(Math.abs(max) * .1, 1); min -= pad; max += pad;
+        const left = 60, right = 14, top = 10, bottom = 32, pw = width - left - right, ph = height - top - bottom;
+        const x = f => left + (f - response[0].f) / (response.at(-1).f - response[0].f) * pw, y = v => top + (max - v) / (max - min) * ph;
+        ctx.font = '11px Segoe UI, Arial'; ctx.strokeStyle = '#dce5ec'; ctx.fillStyle = '#627b8d'; ctx.lineWidth = 1;
+        ticks(min, max).forEach(t => { const yy = y(t); ctx.beginPath(); ctx.moveTo(left, yy); ctx.lineTo(left + pw, yy); ctx.stroke(); ctx.textAlign = 'right'; ctx.textBaseline = 'middle'; ctx.fillText(format(t), left - 7, yy); });
+        for (let i = 0; i <= 5; i++) { const f = response[0].f + (response.at(-1).f - response[0].f) * i / 5, xx = x(f); ctx.beginPath(); ctx.moveTo(xx, top); ctx.lineTo(xx, top + ph); ctx.stroke(); ctx.textAlign = 'center'; ctx.textBaseline = 'top'; ctx.fillText(format(f), xx, top + ph + 8); }
+        ctx.strokeStyle = '#8da4b5'; ctx.beginPath(); ctx.moveTo(left, top); ctx.lineTo(left, top + ph); ctx.lineTo(left + pw, top + ph); ctx.stroke();
+        ctx.strokeStyle = key === 'phase' ? '#8b4f9f' : key === 'db' ? '#d26a18' : '#1876a9'; ctx.lineWidth = 2; ctx.beginPath(); let started = false;
+        response.forEach(p => { if (!Number.isFinite(p[key])) { started = false; return; } const px = x(p.f), py = y(p[key]); if (!started) { ctx.moveTo(px, py); started = true; } else ctx.lineTo(px, py); }); ctx.stroke();
+        const unit = key === 'amplitude' ? '' : key === 'db' ? ' dB' : '°'; readout.textContent = `Zakres: ${format(min + pad)} do ${format(max - pad)}${unit}`;
+        canvas.onpointermove = event => { const r = canvas.getBoundingClientRect(), position = Math.max(0, Math.min(1, (event.clientX - r.left - left) / pw)), p = response[Math.round(position * (response.length - 1))]; readout.textContent = `f = ${format(p.f)} Hz, wartość = ${format(p[key])}${unit}`; };
+        canvas.onpointerleave = () => { readout.textContent = `Zakres: ${format(min + pad)} do ${format(max - pad)}${unit}`; };
+      }
+      els.num.addEventListener('change', () => { updateEnabled(); draw(); });
+      els.den.addEventListener('change', () => { updateEnabled(); draw(); });
+      document.querySelector('.controls').addEventListener('input', event => { if (event.target.matches('input')) draw(); });
+      document.querySelector('#draw').addEventListener('click', draw); document.querySelector('#reset').addEventListener('click', setDefaults);
+      new ResizeObserver(() => { if (response.length) charts.forEach(renderChart); }).observe(document.querySelector('.chart-area'));
+      setDefaults();
+    })();
+  </script>
+</body>
+</html>

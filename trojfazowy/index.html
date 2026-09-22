@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Wektory wirujące i przebieg trójfazowy</title>
+  <style>
+    :root { color-scheme: light; font-family: Inter, Segoe UI, Arial, sans-serif; color: #14212f; background: #edf2f7; }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-width: 320px; }
+    main { max-width: 1320px; margin: 0 auto; padding: 28px; }
+    header { display: flex; align-items: end; justify-content: space-between; gap: 24px; margin-bottom: 22px; }
+    h1 { margin: 0; font-size: clamp(1.5rem, 3vw, 2rem); letter-spacing: -0.025em; }
+    header p { margin: 7px 0 0; color: #52606d; }
+    .tag { color: #1e5c8f; background: #e3f0fa; padding: 7px 10px; border-radius: 999px; font-size: .82rem; font-weight: 650; white-space: nowrap; }
+    .card { background: #fff; border: 1px solid #dce4ec; border-radius: 14px; box-shadow: 0 8px 24px rgba(35, 55, 75, .07); }
+    .chart { padding: 20px 20px 14px; overflow: hidden; }
+    .chart-heading { display: grid; grid-template-columns: 37% 1fr; gap: 18px; margin-bottom: 8px; }
+    h2 { font-size: 1rem; margin: 0; }
+    .unit { font-size: .78rem; color: #688093; margin-left: 7px; }
+    canvas { display: block; width: 100%; height: 440px; }
+    .readout { display: flex; justify-content: space-between; gap: 12px; margin: 3px 0 0; color: #587084; font-size: .77rem; }
+    .phase-values { display: flex; flex-wrap: wrap; gap: 8px 20px; justify-content: flex-end; }
+    .phase-a { color: #c63d43; }
+    .phase-b { color: #178455; }
+    .phase-c { color: #1876a9; }
+    .legend { display: flex; flex-wrap: wrap; gap: 9px 18px; margin: 0 0 7px; color: #405261; font-size: .8rem; font-weight: 650; }
+    .legend span::before { content: ''; display: inline-block; width: 17px; height: 3px; margin-right: 7px; vertical-align: middle; background: currentColor; border-radius: 2px; }
+    .controls { margin-top: 16px; padding: 20px; }
+    .control-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; }
+    label { display: block; color: #405261; font-size: .82rem; font-weight: 650; margin-top: 14px; }
+    input[type="range"] { display: block; width: 100%; margin: 12px 0 3px; accent-color: #176da5; cursor: pointer; }
+    input:focus-visible { outline: 3px solid #b9dbf3; outline-offset: 4px; }
+    .scale { display: flex; justify-content: space-between; color: #688093; font-size: .77rem; }
+    footer { color: #617688; font-size: .78rem; padding: 14px 3px 0; }
+    @media (max-width: 850px) { main { padding: 16px; } header { align-items: start; flex-direction: column; gap: 10px; } .chart { padding: 16px 12px 12px; } canvas { height: 330px; } }
+    @media (max-width: 560px) { .chart-heading { gap: 6px; } .chart-heading h2 { font-size: .85rem; } .unit { display: none; } canvas { height: 260px; } .readout { display: block; } .phase-values { justify-content: flex-start; margin-top: 6px; } }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <div><h1>Wektory wirujące i przebieg trójfazowy</h1><p>Trzy rzuty na oś Im tworzą przebiegi przesunięte o 120°</p></div>
+      <div class="tag">działa bez połączenia z internetem</div>
+    </header>
+    <section class="card chart" aria-label="Animacja trzech wektorów i trzech sinusoid">
+      <div class="chart-heading">
+        <div><h2>Płaszczyzna zespolona <span class="unit">Re–Im</span></h2></div>
+        <div><h2>Przebieg czasowy <span class="unit">trzy fazy przesunięte o 120°</span></h2></div>
+      </div>
+      <p class="legend" aria-label="Kolory faz"><span class="phase-a">Faza A</span><span class="phase-b">Faza B</span><span class="phase-c">Faza C</span></p>
+      <canvas id="animation" role="img" aria-label="Trzy wirujące wektory po lewej i powstające przebiegi trzech faz po prawej"></canvas>
+      <p class="readout"><span id="angle">Kąt fazy A: 30°</span><span class="phase-values"><span class="phase-a" id="value-a">A: 0,50</span><span class="phase-b" id="value-b">B: −1,00</span><span class="phase-c" id="value-c">C: 0,50</span></span></p>
+    </section>
+    <section class="card controls" aria-label="Sterowanie częstotliwością">
+      <div class="control-heading"><h2>Częstotliwość przebiegu</h2><strong id="frequency">0,50 Hz</strong></div>
+      <label for="frequency-slider">Ustaw częstotliwość</label>
+      <input id="frequency-slider" type="range" min="0.1" max="2" step="0.01" value="0.5">
+      <div class="scale"><span>0,10 Hz</span><span>2,00 Hz</span></div>
+    </section>
+    <footer>Wektory obracają się przeciwnie do ruchu wskazówek zegara. Po zapełnieniu wykresu przebiegi przesuwają się w lewo.</footer>
+  </main>
+  <script>
+    (() => {
+      const canvas = document.querySelector('#animation');
+      const ctx = canvas.getContext('2d');
+      const slider = document.querySelector('#frequency-slider');
+      const frequencyReadout = document.querySelector('#frequency');
+      const angleReadout = document.querySelector('#angle');
+      const valueReadouts = [
+        document.querySelector('#value-a'),
+        document.querySelector('#value-b'),
+        document.querySelector('#value-c')
+      ];
+      const initialAngle = Math.PI / 6;
+      const phases = [
+        { name: 'A', offset: 0, color: '#c63d43' },
+        { name: 'B', offset: -2 * Math.PI / 3, color: '#178455' },
+        { name: 'C', offset: 2 * Math.PI / 3, color: '#1876a9' }
+      ];
+      let frequency = Number(slider.value);
+      let phase = initialAngle;
+      let elapsed = 0;
+      let samples = [{ time: 0, values: phases.map(item => Math.sin(initialAngle + item.offset)) }];
+      let previousFrame;
+      let width = 0;
+      let height = 0;
+
+      function sizeCanvas() {
+        const bounds = canvas.getBoundingClientRect();
+        const ratio = window.devicePixelRatio || 1;
+        width = bounds.width;
+        height = bounds.height;
+        canvas.width = Math.round(width * ratio);
+        canvas.height = Math.round(height * ratio);
+        ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+        draw();
+      }
+
+      function line(x1, y1, x2, y2, color, lineWidth = 1) {
+        ctx.strokeStyle = color;
+        ctx.lineWidth = lineWidth;
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.stroke();
+      }
+
+      function arrow(x1, y1, x2, y2, color, lineWidth = 2) {
+        line(x1, y1, x2, y2, color, lineWidth);
+        const direction = Math.atan2(y2 - y1, x2 - x1);
+        const length = 9;
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.moveTo(x2, y2);
+        ctx.lineTo(x2 - length * Math.cos(direction - Math.PI / 6), y2 - length * Math.sin(direction - Math.PI / 6));
+        ctx.lineTo(x2 - length * Math.cos(direction + Math.PI / 6), y2 - length * Math.sin(direction + Math.PI / 6));
+        ctx.closePath();
+        ctx.fill();
+      }
+
+      function draw() {
+        if (!width || !height) return;
+        ctx.clearRect(0, 0, width, height);
+        const compact = width < 610;
+        const split = width * (compact ? .38 : .37);
+        const middle = height * .5;
+        const radius = Math.min(height * .31, split * .34);
+        const centerX = split * .49;
+        const plotLeft = split + (compact ? 22 : 36);
+        const plotRight = width - (compact ? 12 : 22);
+        const plotWidth = plotRight - plotLeft;
+        const amplitude = radius;
+        const timeWindow = 3 / frequency;
+        const visibleStart = Math.max(0, elapsed - timeWindow);
+        const pointX = plotLeft + Math.min(elapsed / timeWindow, 1) * plotWidth;
+        const currentValues = phases.map(item => Math.sin(phase + item.offset));
+
+        ctx.font = compact ? '10px Segoe UI, Arial' : '12px Segoe UI, Arial';
+        ctx.fillStyle = '#627b8d';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.strokeStyle = '#dce5ec';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(centerX, middle, radius, 0, 2 * Math.PI);
+        ctx.stroke();
+        for (const level of [-1, -.5, .5, 1]) {
+          const y = middle - amplitude * level;
+          line(plotLeft, y, plotRight, y, '#e6edf3');
+          if (!compact) {
+            ctx.textAlign = 'right';
+            ctx.fillText(level.toFixed(1).replace('.', ','), plotLeft - 8, y);
+          }
+        }
+        for (let index = 0; index <= 3; index++) {
+          const x = plotLeft + index * plotWidth / 3;
+          line(x, middle - amplitude * 1.15, x, middle + amplitude * 1.15, '#e6edf3');
+        }
+        arrow(centerX - radius * 1.2, middle, centerX + radius * 1.25, middle, '#8da4b5', 1.2);
+        arrow(centerX, middle + radius * 1.2, centerX, middle - radius * 1.25, '#8da4b5', 1.2);
+        arrow(plotLeft, middle, plotRight + 4, middle, '#8da4b5', 1.2);
+        ctx.textAlign = 'center';
+        ctx.fillText('Re', centerX + radius * 1.25, middle + 17);
+        ctx.fillText('Im', centerX + 16, middle - radius * 1.25);
+        ctx.fillText('t', plotRight - 4, middle + 18);
+
+        phases.forEach((item, index) => {
+          ctx.save();
+          ctx.beginPath();
+          ctx.rect(plotLeft, middle - amplitude * 1.18, plotWidth, amplitude * 2.36);
+          ctx.clip();
+          ctx.strokeStyle = item.color;
+          ctx.lineWidth = 2.5;
+          ctx.lineJoin = 'round';
+          ctx.beginPath();
+          let started = false;
+          for (const sample of samples) {
+            if (sample.time < visibleStart) continue;
+            const x = plotLeft + (sample.time - visibleStart) / timeWindow * plotWidth;
+            const y = middle - amplitude * sample.values[index];
+            if (!started) { ctx.moveTo(x, y); started = true; }
+            else ctx.lineTo(x, y);
+          }
+          ctx.stroke();
+          ctx.restore();
+        });
+
+        phases.forEach((item, index) => {
+          const angle = phase + item.offset;
+          const tipX = centerX + radius * Math.cos(angle);
+          const tipY = middle - radius * currentValues[index];
+          const pointY = middle - amplitude * currentValues[index];
+          ctx.save();
+          ctx.globalAlpha = .65;
+          ctx.setLineDash([4, 5]);
+          line(tipX, tipY, pointX, pointY, item.color, 1);
+          ctx.restore();
+          arrow(centerX, middle, tipX, tipY, item.color, 3);
+          ctx.fillStyle = item.color;
+          ctx.beginPath();
+          ctx.arc(pointX, pointY, 4, 0, Math.PI * 2);
+          ctx.fill();
+        });
+        ctx.fillStyle = '#526a7e';
+        ctx.textAlign = 'left';
+        ctx.fillText('0', plotLeft + 3, middle + 17);
+        angleReadout.textContent = `Kąt fazy A: ${((phase * 180 / Math.PI) % 360).toFixed(0)}°`;
+        currentValues.forEach((value, index) => {
+          valueReadouts[index].textContent = `${phases[index].name}: ${value.toFixed(2).replace('.', ',')}`;
+        });
+      }
+
+      function animate(timestamp) {
+        if (previousFrame !== undefined) {
+          const delta = Math.min((timestamp - previousFrame) / 1000, .05);
+          elapsed += delta;
+          phase = (phase + 2 * Math.PI * frequency * delta) % (2 * Math.PI);
+          samples.push({ time: elapsed, values: phases.map(item => Math.sin(phase + item.offset)) });
+          const oldest = elapsed - 3 / frequency - .1;
+          while (samples.length > 2 && samples[1].time < oldest) samples.shift();
+          draw();
+        }
+        previousFrame = timestamp;
+        requestAnimationFrame(animate);
+      }
+
+      slider.addEventListener('input', () => {
+        frequency = Number(slider.value);
+        frequencyReadout.textContent = `${frequency.toFixed(2).replace('.', ',')} Hz`;
+        elapsed = 0;
+        samples = [{ time: 0, values: phases.map(item => Math.sin(phase + item.offset)) }];
+        draw();
+      });
+      if ('ResizeObserver' in window) new ResizeObserver(sizeCanvas).observe(canvas);
+      else window.addEventListener('resize', sizeCanvas);
+      sizeCanvas();
+      requestAnimationFrame(animate);
+    })();
+  </script>
+</body>
+</html>
