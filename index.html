@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Interaktywne programy ilustrujące zagadnienia z teorii obwodów">
+  <title>Teoria obwodów — programy interaktywne</title>
+  <style>
+    :root { color-scheme: light; font-family: Inter, Segoe UI, Arial, sans-serif; color: #14212f; background: #edf2f7; }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-width: 320px; }
+    main { max-width: 1120px; margin: 0 auto; padding: 42px 28px; }
+    header { display: flex; align-items: end; justify-content: space-between; gap: 24px; margin-bottom: 28px; }
+    h1 { margin: 0; font-size: clamp(1.65rem, 4vw, 2.35rem); letter-spacing: -.025em; }
+    header p { max-width: 680px; margin: 9px 0 0; color: #52606d; line-height: 1.55; }
+    .tag { color: #1e5c8f; background: #e3f0fa; padding: 7px 10px; border-radius: 999px; font-size: .82rem; font-weight: 650; white-space: nowrap; }
+    .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+    .card { display: flex; flex-direction: column; min-height: 190px; padding: 22px; color: inherit; background: #fff; border: 1px solid #dce4ec; border-radius: 14px; box-shadow: 0 8px 24px rgba(35, 55, 75, .07); text-decoration: none; transition: transform .16s ease, border-color .16s ease, box-shadow .16s ease; }
+    .card:hover { transform: translateY(-3px); border-color: #aac9dd; box-shadow: 0 12px 28px rgba(35, 55, 75, .11); }
+    .card:focus-visible { outline: 3px solid #88bfe0; outline-offset: 3px; }
+    .number { width: 34px; height: 34px; display: grid; place-items: center; margin-bottom: 17px; color: #176da5; background: #e8f2f8; border-radius: 9px; font-size: .78rem; font-weight: 750; }
+    h2 { margin: 0; font-size: 1.08rem; }
+    .card p { margin: 9px 0 18px; color: #5b6e7d; font-size: .88rem; line-height: 1.5; }
+    .open { margin-top: auto; color: #176da5; font-size: .82rem; font-weight: 750; }
+    footer { margin-top: 23px; color: #617688; font-size: .78rem; }
+    @media (max-width: 720px) { main { padding: 25px 16px; } header { align-items: start; flex-direction: column; gap: 12px; } .grid { grid-template-columns: 1fr; } .card { min-height: 170px; } }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <div>
+        <h1>Teoria obwodów</h1>
+        <p>Interaktywne programy dydaktyczne uruchamiane bezpośrednio w przeglądarce. Wybierz ilustrację, aby rozpocząć.</p>
+      </div>
+      <div class="tag">programy interaktywne</div>
+    </header>
+    <section class="grid" aria-label="Lista programów">
+      <a class="card" href="wektor_wirujacy/"><span class="number">01</span><h2>Wektor wirujący i sinusoida</h2><p>Animowana zależność między ruchem wektora na płaszczyźnie zespolonej a przebiegiem sinusoidalnym.</p><span class="open">Uruchom program →</span></a>
+      <a class="card" href="trojfazowy/"><span class="number">02</span><h2>Przebieg trójfazowy</h2><p>Trzy wirujące wektory i odpowiadające im przebiegi przesunięte względem siebie o 120°.</p><span class="open">Uruchom program →</span></a>
+      <a class="card" href="prostokatny/"><span class="number">03</span><h2>Sygnał prostokątny</h2><p>Konstrukcja sygnału prostokątnego z nieparzystych harmonicznych szeregu Fouriera.</p><span class="open">Uruchom program →</span></a>
+      <a class="card" href="suma_harmonicznych/"><span class="number">04</span><h2>Suma harmonicznych</h2><p>Samodzielne budowanie przebiegu z zadanych amplitud, faz i składowej stałej.</p><span class="open">Uruchom program →</span></a>
+      <a class="card" href="charakterystyki/"><span class="number">05</span><h2>Charakterystyki częstotliwościowe</h2><p>Charakterystyki amplitudowe i fazowe oraz odpowiedzi czasowe układu liniowego.</p><span class="open">Uruchom program →</span></a>
+    </section>
+    <footer>Materiały dydaktyczne z teorii obwodów.</footer>
+  </main>
+</body>
+</html>

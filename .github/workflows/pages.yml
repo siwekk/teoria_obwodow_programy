@@ -1,0 +1,46 @@
+name: Publikacja w GitHub Pages
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Pobranie repozytorium
+        uses: actions/checkout@v6
+      - name: Konfiguracja GitHub Pages
+        uses: actions/configure-pages@v5
+      - name: Przygotowanie publicznych plików
+        shell: bash
+        run: |
+          mkdir -p _site/{wektor_wirujacy,trojfazowy,prostokatny,suma_harmonicznych,charakterystyki}
+          cp index.html _site/index.html
+          cp wektor_wirujacy/index.html _site/wektor_wirujacy/index.html
+          cp trojfazowy/index.html _site/trojfazowy/index.html
+          cp prostokatny/index.html _site/prostokatny/index.html
+          cp suma_harmonicznych/index.html _site/suma_harmonicznych/index.html
+          cp charakterystyki/index.html _site/charakterystyki/index.html
+          touch _site/.nojekyll
+      - name: Przekazanie plików strony
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: _site
+      - name: Publikacja
+        id: deployment
+        uses: actions/deploy-pages@v4
