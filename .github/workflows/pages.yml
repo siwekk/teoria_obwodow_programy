@@ -29,13 +29,14 @@ jobs:
       - name: Przygotowanie publicznych plików
         shell: bash
         run: |
-          mkdir -p _site/{wektor_wirujacy,trojfazowy,prostokatny,suma_harmonicznych,charakterystyki}
+          mkdir -p _site/{wektor_wirujacy,trojfazowy,prostokatny,suma_harmonicznych,charakterystyki,obwod_trojfazowy}
           cp index.html _site/index.html
           cp wektor_wirujacy/index.html _site/wektor_wirujacy/index.html
           cp trojfazowy/index.html _site/trojfazowy/index.html
           cp prostokatny/index.html _site/prostokatny/index.html
           cp suma_harmonicznych/index.html _site/suma_harmonicznych/index.html
           cp charakterystyki/index.html _site/charakterystyki/index.html
+          cp obwod_trojfazowy/index.html _site/obwod_trojfazowy/index.html
           touch _site/.nojekyll
       - name: Przekazanie plików strony
         uses: actions/upload-pages-artifact@v4
