@@ -1,0 +1,985 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Interaktywne laboratorium niesymetrycznego obwodu trójfazowego połączonego w gwiazdę">
+  <title>Niesymetryczny obwód trójfazowy</title>
+  <style>
+    :root {
+      color-scheme: light;
+      font-family: Inter, Segoe UI, Arial, sans-serif;
+      color: #14212f;
+      background: #edf2f7;
+      --a: #c63d43;
+      --b: #178455;
+      --c: #1876a9;
+      --n: #7352a3;
+      --ink: #31485a;
+      --muted: #617688;
+      --border: #dce4ec;
+      --accent: #176da5;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-width: 320px; }
+    button, input, select { font: inherit; }
+    button { cursor: pointer; }
+    main { max-width: 1380px; margin: 0 auto; padding: 28px; }
+    header { display: flex; align-items: end; justify-content: space-between; gap: 24px; margin-bottom: 22px; }
+    h1 { margin: 0; font-size: clamp(1.5rem, 3vw, 2rem); letter-spacing: -.025em; }
+    header p { margin: 7px 0 0; color: #52606d; line-height: 1.45; }
+    .tag { color: #1e5c8f; background: #e3f0fa; padding: 7px 10px; border-radius: 999px; font-size: .82rem; font-weight: 650; white-space: nowrap; }
+    .card { background: #fff; border: 1px solid var(--border); border-radius: 14px; box-shadow: 0 8px 24px rgba(35,55,75,.07); }
+    .toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 18px; margin-bottom: 16px; }
+    .toolbar-group { display: flex; flex-wrap: wrap; align-items: center; gap: 9px; }
+    .toolbar strong { font-size: .9rem; }
+    .toolbar button, .toolbar select, .action-button { min-height: 36px; border: 1px solid #c9d6df; border-radius: 8px; padding: 7px 11px; color: #31516a; background: #f8fafb; font-weight: 650; }
+    .toolbar button:hover, .toolbar select:hover, .action-button:hover { background: #eaf1f6; }
+    .toolbar button:focus-visible, .toolbar select:focus-visible, .action-button:focus-visible, input:focus-visible { outline: 3px solid #b9dbf3; outline-offset: 2px; }
+    .status { color: var(--muted); font-size: .78rem; }
+    .schematic-card { padding: 17px 18px 10px; overflow: hidden; }
+    .section-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; }
+    h2 { margin: 0; font-size: 1rem; }
+    .section-heading p { margin: 0; color: var(--muted); font-size: .78rem; }
+    #schematic { display: block; width: 100%; height: auto; min-height: 400px; margin-top: 5px; }
+    .wire { fill: none; stroke: #738a9b; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+    .wire.phase-a { stroke: var(--a); }
+    .wire.phase-b { stroke: var(--b); }
+    .wire.phase-c { stroke: var(--c); }
+    .wire.neutral { stroke: var(--n); }
+    .current-arrow { fill: none; stroke-width: 2.2; stroke-linecap: round; }
+    .current-arrow.phase-a { stroke: var(--a); }
+    .current-arrow.phase-b { stroke: var(--b); }
+    .current-arrow.phase-c { stroke: var(--c); }
+    .current-arrow.neutral { stroke: var(--n); }
+    .node { fill: #fff; stroke: #40596b; stroke-width: 3; }
+    .node-dot { fill: #40596b; }
+    .source circle { fill: #fff; stroke-width: 3; }
+    .source line, .source path { fill: none; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+    .source[data-key="EA"] circle, .source[data-key="EA"] line, .source[data-key="EA"] path { stroke: var(--a); }
+    .source[data-key="EB"] circle, .source[data-key="EB"] line, .source[data-key="EB"] path { stroke: var(--b); }
+    .source[data-key="EC"] circle, .source[data-key="EC"] line, .source[data-key="EC"] path { stroke: var(--c); }
+    .element.source .hit { stroke: transparent; }
+    .source-us { display: none; }
+    .symbols-us .source-us { display: inline; }
+    .symbols-us .source-eu { display: none; }
+    .element { cursor: pointer; pointer-events: bounding-box; }
+    .element .hit { stroke: transparent; stroke-width: 34; fill: none; }
+    .element:hover .device-body, .element:focus .device-body { filter: drop-shadow(0 0 4px rgba(23,109,165,.45)); }
+    .element:focus { outline: none; }
+    .device-body { fill: #fff; stroke: currentColor; stroke-width: 3; stroke-linejoin: round; }
+    .passive .device-gap { fill: none; stroke: #fff; stroke-width: 32; pointer-events: none; }
+    .element text { fill: #263c4d; font-size: 15px; pointer-events: none; }
+    .element .symbol-name { font-weight: 750; }
+    .element .symbol-value { fill: #536c7e; font-size: 14px; }
+    .element .edit-hint { fill: #8093a1; font-size: 11px; }
+    .source text { font-size: 15px; }
+    .source .symbol-value { font-size: 14px; }
+    .diagram-label { fill: #607789; font-size: 14px; font-weight: 650; }
+    .phase-label { font-size: 16px; font-weight: 800; }
+    .phase-label.a { fill: var(--a); }
+    .phase-label.b { fill: var(--b); }
+    .phase-label.c { fill: var(--c); }
+    .results { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 12px; margin-top: 16px; }
+    .result-card { padding: 15px 16px; min-height: 98px; }
+    .result-card h3 { margin: 0 0 8px; color: #587084; font-size: .76rem; text-transform: uppercase; letter-spacing: .045em; }
+    .result-card strong { display: block; font: 600 1rem Georgia, serif; line-height: 1.45; overflow-wrap: anywhere; }
+    .result-card small { display: block; margin-top: 5px; color: var(--muted); }
+    .phase-a-text { color: var(--a); }
+    .phase-b-text { color: var(--b); }
+    .phase-c-text { color: var(--c); }
+    .neutral-text { color: var(--n); }
+    .phasor-card { margin-top: 16px; padding: 18px 18px 12px; overflow: hidden; }
+    .legend { display: flex; flex-wrap: wrap; gap: 9px 18px; margin: 12px 0 2px; color: #405261; font-size: .78rem; font-weight: 650; }
+    .legend span::before { content: ''; display: inline-block; width: 18px; height: 3px; margin-right: 7px; vertical-align: middle; background: currentColor; border-radius: 2px; }
+    .legend .current::before { height: 0; border-top: 2px dashed currentColor; background: transparent; }
+    #phasor { display: block; width: 100%; height: 510px; }
+    .calculation-card { margin-top: 16px; padding: 20px; }
+    .calculation-actions { display: flex; flex-wrap: wrap; gap: 9px; }
+    .action-button.primary { color: #fff; background: var(--accent); border-color: var(--accent); }
+    .action-button.primary:hover { background: #125c8c; }
+    button:disabled { opacity: .5; cursor: not-allowed; }
+    .phasor-note { margin: 4px 0; color: #617688; font-size: .8rem; line-height: 1.5; }
+    .equations { margin-top: 17px; display: grid; gap: 10px; }
+    .equation { padding: 12px 14px; border: 1px solid #e3eaf0; border-radius: 9px; background: #fafcfd; color: #334a5c; font: 1rem/1.62 Georgia, 'Times New Roman', serif; overflow-x: auto; }
+    .equation .note { display: block; color: #6a8091; font: .78rem/1.45 Inter, Segoe UI, Arial, sans-serif; }
+    .error-box { display: none; margin-top: 16px; padding: 12px 14px; color: #802e35; background: #fff0f1; border: 1px solid #efc4c8; border-radius: 9px; font-size: .86rem; }
+    footer { color: #617688; font-size: .78rem; padding: 14px 3px 0; }
+    dialog { width: min(470px, calc(100vw - 28px)); border: 0; border-radius: 14px; padding: 0; box-shadow: 0 22px 70px rgba(18,34,48,.28); }
+    dialog::backdrop { background: rgba(21,34,45,.45); }
+    .dialog-body { padding: 22px; }
+    .dialog-body h2 { font-size: 1.15rem; }
+    .dialog-body > p { margin: 7px 0 18px; color: var(--muted); font-size: .84rem; line-height: 1.5; }
+    .field-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    label { display: block; color: #405261; font-size: .8rem; font-weight: 650; }
+    input[type="number"] { width: 100%; height: 39px; margin-top: 6px; padding: 7px 9px; border: 1px solid #bac8d4; border-radius: 7px; color: #182733; background: #fff; }
+    .preview { min-height: 45px; margin: 15px 0 0; padding: 11px 12px; color: #31516a; background: #eef5f9; border-radius: 8px; font: 1rem Georgia, serif; }
+    .dialog-error { min-height: 18px; margin: 8px 0 0; color: #a12f38; font-size: .78rem; }
+    .dialog-actions { display: flex; justify-content: flex-end; gap: 9px; margin-top: 18px; }
+    .dialog-actions button { border: 1px solid #c9d6df; border-radius: 8px; padding: 8px 14px; color: #31516a; background: #f8fafb; font-weight: 700; }
+    .dialog-actions .save { color: #fff; background: var(--accent); border-color: var(--accent); }
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+    @media (max-width: 980px) { .results { grid-template-columns: repeat(2,minmax(0,1fr)); } #phasor { height: 450px; } }
+    @media (max-width: 720px) {
+      main { padding: 16px; }
+      header { align-items: start; flex-direction: column; gap: 10px; }
+      .toolbar { align-items: start; flex-direction: column; }
+      .schematic-card, .phasor-card { padding-inline: 12px; }
+      .schematic-card { overflow-x: auto; overflow-y: hidden; }
+      #schematic { width: 900px; max-width: none; min-height: 0; }
+      #phasor { height: 390px; }
+      .section-heading { align-items: start; flex-direction: column; gap: 5px; }
+    }
+    @media (max-width: 520px) { .results { grid-template-columns: 1fr; } .field-grid { grid-template-columns: 1fr; } #phasor { height: 360px; } }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <div>
+        <h1>Niesymetryczny obwód trójfazowy</h1>
+        <p>Połączenie gwiazdowe z impedancją przewodu neutralnego i edytowalnymi wartościami zespolonymi</p>
+      </div>
+      <div class="tag">działa bez połączenia z internetem</div>
+    </header>
+
+    <section class="card toolbar" aria-label="Ustawienia programu">
+      <div class="toolbar-group">
+        <strong>Styl symboli</strong>
+        <label class="sr-only" for="symbol-style">Styl symboli elementów i źródeł</label>
+        <select id="symbol-style">
+          <option value="eu">Europejski, prostokąt</option>
+          <option value="us">US, zygzak</option>
+        </select>
+        <button id="reset" type="button">Przywróć przykład</button>
+      </div>
+      <div class="toolbar-group">
+        <button id="save-json" type="button">Zapisz ustawienia JSON</button>
+        <button id="load-json" type="button">Wczytaj JSON</button>
+        <input id="json-file" type="file" accept="application/json,.json" hidden>
+        <span class="status" id="save-status" role="status">Ustawienia są zapisywane lokalnie</span>
+      </div>
+    </section>
+
+    <section class="card schematic-card" aria-labelledby="schematic-title">
+      <div class="section-heading">
+        <h2 id="schematic-title">Schemat obwodu</h2>
+        <p>Kliknij źródło albo element bierny, aby zmienić jego wartość</p>
+      </div>
+      <svg id="schematic" viewBox="0 0 1160 610" role="group" aria-label="Dwa połączenia gwiazdowe. Źródła zbiegają się w punkcie O, odbiorniki w punkcie N, a między punktami leży impedancja neutralna.">
+        <defs>
+          <marker id="arrow-a" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="9" markerHeight="9" orient="auto"><path d="M 0 1 L 9 5 L 0 9 Z" fill="#c63d43"/></marker>
+          <marker id="arrow-b" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="9" markerHeight="9" orient="auto"><path d="M 0 1 L 9 5 L 0 9 Z" fill="#178455"/></marker>
+          <marker id="arrow-c" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="9" markerHeight="9" orient="auto"><path d="M 0 1 L 9 5 L 0 9 Z" fill="#1876a9"/></marker>
+          <marker id="arrow-n" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="9" markerHeight="9" orient="auto"><path d="M 0 1 L 9 5 L 0 9 Z" fill="#7352a3"/></marker>
+        </defs>
+        <text class="diagram-label" x="135" y="48">Źródło trójfazowe</text>
+        <text class="diagram-label" x="833" y="48">Odbiornik</text>
+
+        <path class="wire phase-a" d="M 235 300 V 80 H 900 V 300"/>
+        <path class="wire phase-b" d="M 235 300 L 55 480 V 535 H 700 V 480 L 900 300"/>
+        <path class="wire phase-c" d="M 235 300 L 415 480 V 570 H 1045 V 480 L 900 300"/>
+        <path class="wire neutral" d="M 235 300 H 900"/>
+
+        <path class="current-arrow phase-a" d="M 565 80 H 635" marker-end="url(#arrow-a)"/>
+        <text class="diagram-label" x="570" y="65">I<tspan baseline-shift="sub" font-size="10">A</tspan></text>
+        <path class="current-arrow phase-b" d="M 290 535 H 360" marker-end="url(#arrow-b)"/>
+        <text class="diagram-label" x="296" y="520">I<tspan baseline-shift="sub" font-size="10">B</tspan></text>
+        <path class="current-arrow phase-c" d="M 665 570 H 735" marker-end="url(#arrow-c)"/>
+        <text class="diagram-label" x="670" y="555">I<tspan baseline-shift="sub" font-size="10">C</tspan></text>
+        <path class="current-arrow neutral" d="M 815 300 H 745" marker-end="url(#arrow-n)"/>
+        <text class="diagram-label" x="756" y="282">I<tspan baseline-shift="sub" font-size="10">N</tspan></text>
+
+        <g class="element source" data-key="EA" tabindex="0" role="button" aria-label="Edytuj napięcie źródła fazy A">
+          <path class="hit" d="M 235 135 V 205"/>
+          <circle class="device-body" cx="235" cy="170" r="33"/>
+          <path class="source-eu" d="M 235 188 V 151 M 225 161 L 235 151 L 245 161"/>
+          <g class="source-us" transform="translate(235 170)">
+            <path d="M -18 0 C -12 -14 -6 -14 0 0 S 12 14 18 0"/>
+            <path d="M -4 -22 H 4 M 0 -26 V -18 M -4 22 H 4"/>
+          </g>
+          <text class="symbol-name" x="166" y="111">E<tspan baseline-shift="sub" font-size="11">A</tspan></text>
+          <text class="symbol-value" id="value-EA" x="98" y="133">230,00 + j0,00 V</text>
+        </g>
+        <g class="element source" data-key="EB" tabindex="0" role="button" aria-label="Edytuj napięcie źródła fazy B">
+          <path class="hit" d="M 120 370 L 170 420"/>
+          <circle class="device-body" cx="145" cy="390" r="33"/>
+          <path class="source-eu" d="M 157 378 L 133 402 M 133 390 V 402 H 145"/>
+          <g class="source-us" transform="translate(145 390)">
+            <path d="M -18 0 C -12 -14 -6 -14 0 0 S 12 14 18 0"/>
+            <path d="M -22 18 H -14 M -18 14 V 22 M 14 -18 H 22"/>
+          </g>
+          <text class="symbol-name" x="30" y="326">E<tspan baseline-shift="sub" font-size="11">B</tspan></text>
+          <text class="symbol-value" id="value-EB" x="18" y="348">−115,00 − j199,19 V</text>
+        </g>
+        <g class="element source" data-key="EC" tabindex="0" role="button" aria-label="Edytuj napięcie źródła fazy C">
+          <path class="hit" d="M 300 370 L 350 420"/>
+          <circle class="device-body" cx="325" cy="390" r="33"/>
+          <path class="source-eu" d="M 313 378 L 337 402 M 325 402 H 337 V 390"/>
+          <g class="source-us" transform="translate(325 390)">
+            <path d="M -18 0 C -12 -14 -6 -14 0 0 S 12 14 18 0"/>
+            <path d="M 14 18 H 22 M 18 14 V 22 M -22 -18 H -14"/>
+          </g>
+          <text class="symbol-name" x="366" y="360">E<tspan baseline-shift="sub" font-size="11">C</tspan></text>
+          <text class="symbol-value" id="value-EC" x="366" y="383">−115,00 + j199,19 V</text>
+        </g>
+
+        <g class="element passive" data-key="ZA" data-color="#c63d43" transform="translate(900 188)" tabindex="0" role="button" aria-label="Edytuj impedancję fazy A">
+          <g transform="rotate(90)">
+            <path class="hit" d="M -65 0 H 65"/>
+            <path class="device-gap" d="M -35 0 H 35"/>
+            <path class="device-body resistor-shape" d="M -60 0 L -28 0 L -28 -12 L 28 -12 L 28 12 L -28 12 L -28 0 M 28 0 L 60 0"/>
+          </g>
+          <text class="symbol-name" x="30" y="-18">Z<tspan baseline-shift="sub" font-size="11">A</tspan></text>
+          <text class="symbol-value" id="value-ZA" x="30" y="5">12,00 + j5,00 Ω</text>
+        </g>
+        <g class="element passive" data-key="ZB" data-color="#178455" transform="translate(800 390)" tabindex="0" role="button" aria-label="Edytuj impedancję fazy B">
+          <g transform="rotate(-42)">
+            <path class="hit" d="M -65 0 H 65"/>
+            <path class="device-gap" d="M -35 0 H 35"/>
+            <path class="device-body resistor-shape" d="M -60 0 L -28 0 L -28 -12 L 28 -12 L 28 12 L -28 12 L -28 0 M 28 0 L 60 0"/>
+          </g>
+          <text class="symbol-name" x="-38" y="-30" text-anchor="end">Z<tspan baseline-shift="sub" font-size="11">B</tspan></text>
+          <text class="symbol-value" id="value-ZB" x="-38" y="-8" text-anchor="end">18,00 − j3,00 Ω</text>
+        </g>
+        <g class="element passive" data-key="ZC" data-color="#1876a9" transform="translate(972 390)" tabindex="0" role="button" aria-label="Edytuj impedancję fazy C">
+          <g transform="rotate(51)">
+            <path class="hit" d="M -65 0 H 65"/>
+            <path class="device-gap" d="M -35 0 H 35"/>
+            <path class="device-body resistor-shape" d="M -60 0 L -28 0 L -28 -12 L 28 -12 L 28 12 L -28 12 L -28 0 M 28 0 L 60 0"/>
+          </g>
+          <text class="symbol-name" x="35" y="-17">Z<tspan baseline-shift="sub" font-size="11">C</tspan></text>
+          <text class="symbol-value" id="value-ZC" x="35" y="7">9,00 + j8,00 Ω</text>
+        </g>
+        <g class="element passive" data-key="ZN" data-color="#7352a3" transform="translate(560 300)" tabindex="0" role="button" aria-label="Edytuj impedancję przewodu neutralnego">
+          <path class="hit" d="M -65 0 H 65"/>
+          <path class="device-gap" d="M -35 0 H 35"/>
+          <path class="device-body resistor-shape" d="M -60 0 L -28 0 L -28 -12 L 28 -12 L 28 12 L -28 12 L -28 0 M 28 0 L 60 0"/>
+          <text class="symbol-name" x="-14" y="-29">Z<tspan baseline-shift="sub" font-size="11">N</tspan></text>
+          <text class="symbol-value" id="value-ZN" x="-61" y="39">0,50 + j0,20 Ω</text>
+        </g>
+
+        <circle class="node-dot" cx="235" cy="300" r="5"/>
+        <text class="diagram-label" x="210" y="285">O</text>
+        <circle class="node-dot" cx="900" cy="300" r="5"/>
+        <text class="diagram-label" x="912" y="304">N</text>
+        <text class="phase-label a" x="455" y="66">A</text>
+        <text class="phase-label b" x="480" y="521">B</text>
+        <text class="phase-label c" x="840" y="557">C</text>
+      </svg>
+      <div class="error-box" id="error-box" role="alert"></div>
+    </section>
+
+    <section class="results" aria-label="Najważniejsze wyniki">
+      <article class="card result-card"><h3>Napięcie niesymetrii</h3><strong class="neutral-text" id="result-un">Uₙ = 0 V</strong><small id="polar-un"></small></article>
+      <article class="card result-card"><h3>Napięcia odbiornika</h3><strong><span class="phase-a-text" id="result-ua"></span><br><span class="phase-b-text" id="result-ub"></span><br><span class="phase-c-text" id="result-uc"></span></strong></article>
+      <article class="card result-card"><h3>Prądy fazowe</h3><strong><span class="phase-a-text" id="result-ia"></span><br><span class="phase-b-text" id="result-ib"></span><br><span class="phase-c-text" id="result-ic"></span></strong></article>
+      <article class="card result-card"><h3>Prąd neutralny</h3><strong class="neutral-text" id="result-in">Iₙ = 0 A</strong><small id="kcl-check"></small></article>
+    </section>
+
+    <section class="card phasor-card" aria-labelledby="phasor-title">
+      <div class="section-heading">
+        <h2 id="phasor-title">Wykres wektorowy w konwencji europejskiej</h2>
+        <p>U<sub>N</sub>: O → N. Napięcia odbiornika: N → A, N → B, N → C.</p>
+      </div>
+      <div class="legend" aria-label="Legenda wykresu">
+        <span class="neutral-text">U<sub>N</sub>, od O do N</span>
+        <span class="phase-a-text">Faza A</span>
+        <span class="phase-b-text">Faza B</span>
+        <span class="phase-c-text">Faza C</span>
+        <span class="current">prądy, osobna skala</span>
+      </div>
+      <canvas id="phasor" role="img" aria-label="Wykres wskazowy napięcia niesymetrii oraz napięć i prądów trzech faz"></canvas>
+      <p class="phasor-note" id="phasor-note"></p>
+    </section>
+
+    <section class="card calculation-card" aria-labelledby="calculations-title">
+      <div class="section-heading">
+        <div><h2 id="calculations-title">Pełne obliczenia</h2></div>
+        <div class="calculation-actions">
+          <button class="action-button" id="copy-latex" type="button">Kopiuj LaTeX</button>
+          <button class="action-button primary" id="save-latex" type="button">Zapisz plik .tex</button>
+        </div>
+      </div>
+      <div class="equations" id="equations"></div>
+    </section>
+    <footer>Wszystkie wartości są skutecznymi wskazami zespolonymi. Dodatnia moc bierna oznacza charakter indukcyjny.</footer>
+  </main>
+
+  <dialog id="editor-dialog">
+    <form method="dialog" id="editor-form">
+      <div class="dialog-body">
+        <h2 id="editor-title">Edycja elementu</h2>
+        <p id="editor-description"></p>
+        <div class="field-grid">
+          <label for="real-input"><span id="real-label">Część rzeczywista</span>
+            <input id="real-input" type="number" step="any" inputmode="decimal" required>
+          </label>
+          <label for="imag-input"><span id="imag-label">Część urojona</span>
+            <input id="imag-input" type="number" step="any" inputmode="decimal" required>
+          </label>
+        </div>
+        <div class="preview" id="editor-preview"></div>
+        <p class="dialog-error" id="dialog-error" role="alert"></p>
+        <div class="dialog-actions">
+          <button type="button" id="cancel-editor">Anuluj</button>
+          <button class="save" type="submit">Zastosuj</button>
+        </div>
+      </div>
+    </form>
+  </dialog>
+
+  <script>
+    (() => {
+      'use strict';
+      const STORAGE_KEY = 'teoria-obwodow-obwod-trojfazowy-v1';
+      const defaults = {
+        version: 1,
+        symbolStyle: 'eu',
+        values: {
+          EA: { re: 230, im: 0 },
+          EB: { re: -115, im: -115 * Math.sqrt(3) },
+          EC: { re: -115, im: 115 * Math.sqrt(3) },
+          ZA: { re: 12, im: 5 },
+          ZB: { re: 18, im: -3 },
+          ZC: { re: 9, im: 8 },
+          ZN: { re: .5, im: .2 }
+        }
+      };
+      const metadata = {
+        EA: { symbol: 'E_A', html: 'E<sub>A</sub>', name: 'napięcia źródła fazy A', type: 'source', unit: 'V' },
+        EB: { symbol: 'E_B', html: 'E<sub>B</sub>', name: 'napięcia źródła fazy B', type: 'source', unit: 'V' },
+        EC: { symbol: 'E_C', html: 'E<sub>C</sub>', name: 'napięcia źródła fazy C', type: 'source', unit: 'V' },
+        ZA: { symbol: 'Z_A', html: 'Z<sub>A</sub>', name: 'impedancji odbiornika fazy A', type: 'impedance', unit: 'Ω' },
+        ZB: { symbol: 'Z_B', html: 'Z<sub>B</sub>', name: 'impedancji odbiornika fazy B', type: 'impedance', unit: 'Ω' },
+        ZC: { symbol: 'Z_C', html: 'Z<sub>C</sub>', name: 'impedancji odbiornika fazy C', type: 'impedance', unit: 'Ω' },
+        ZN: { symbol: 'Z_N', html: 'Z<sub>N</sub>', name: 'impedancji przewodu neutralnego', type: 'neutral', unit: 'Ω' }
+      };
+      const colors = { A: '#c63d43', B: '#178455', C: '#1876a9', N: '#7352a3' };
+      const phases = ['A', 'B', 'C'];
+      const $ = selector => document.querySelector(selector);
+      const $$ = selector => [...document.querySelectorAll(selector)];
+      const clone = object => JSON.parse(JSON.stringify(object));
+      const c = (re = 0, im = 0) => ({ re, im });
+      const add = (...items) => items.reduce((sum, item) => c(sum.re + item.re, sum.im + item.im), c());
+      const sub = (a, b) => c(a.re - b.re, a.im - b.im);
+      const mul = (a, b) => c(a.re * b.re - a.im * b.im, a.re * b.im + a.im * b.re);
+      const div = (a, b) => {
+        const scale = Math.max(Math.abs(b.re), Math.abs(b.im));
+        if (scale === 0) throw new Error('Układ nie ma jednoznacznego rozwiązania dla podanych impedancji.');
+        const br = b.re / scale, bi = b.im / scale;
+        const ar = a.re / scale, ai = a.im / scale;
+        const denominator = br * br + bi * bi;
+        return c((ar * br + ai * bi) / denominator, (ai * br - ar * bi) / denominator);
+      };
+      const conj = value => c(value.re, -value.im);
+      const neg = value => c(-value.re, -value.im);
+      const abs = value => Math.hypot(value.re, value.im);
+      const angle = value => Math.atan2(value.im, value.re) * 180 / Math.PI;
+      const inv = value => div(c(1, 0), value);
+      const isZero = value => value.re === 0 && value.im === 0;
+      const fromPolar = (rms, degrees) => {
+        const radians = normalizedAngle(degrees) * Math.PI / 180;
+        return c(rms * Math.cos(radians), rms * Math.sin(radians));
+      };
+      const finiteComplex = value => value && Number.isFinite(Number(value.re)) && Number.isFinite(Number(value.im));
+      let settings = loadLocal();
+      let activeKey = null;
+      let solution = null;
+      let phasorWidth = 0;
+      let phasorHeight = 0;
+
+      const dialog = $('#editor-dialog');
+      const editorForm = $('#editor-form');
+      const realInput = $('#real-input');
+      const imagInput = $('#imag-input');
+      const symbolStyle = $('#symbol-style');
+      const canvas = $('#phasor');
+      const ctx = canvas.getContext('2d');
+
+      function normalizeSettings(candidate) {
+        const result = clone(defaults);
+        if (!candidate || typeof candidate !== 'object') return result;
+        result.symbolStyle = candidate.symbolStyle === 'us' ? 'us' : 'eu';
+        for (const key of Object.keys(result.values)) {
+          if (finiteComplex(candidate.values?.[key])) {
+            result.values[key] = { re: Number(candidate.values[key].re), im: Number(candidate.values[key].im) };
+          }
+        }
+        return result;
+      }
+
+      function loadLocal() {
+        try { return normalizeSettings(JSON.parse(localStorage.getItem(STORAGE_KEY))); }
+        catch { return clone(defaults); }
+      }
+
+      function storeLocal(message = 'Zapisano lokalnie') {
+        const status = $('#save-status');
+        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(settings)); }
+        catch { status.textContent = 'Zapis lokalny niedostępny. Możesz zapisać plik JSON.'; return; }
+        status.textContent = message;
+        clearTimeout(storeLocal.timer);
+        storeLocal.timer = setTimeout(() => { status.textContent = 'Ustawienia są zapisywane lokalnie'; }, 2300);
+      }
+
+      function clean(value, digits = 2) {
+        return Math.abs(value) < .5 * 10 ** -digits ? 0 : value;
+      }
+
+      function numberPL(value, digits = 2) {
+        return clean(value, digits).toLocaleString('pl-PL', { useGrouping: false, minimumFractionDigits: digits, maximumFractionDigits: digits });
+      }
+
+      function numberTex(value, digits = 3) {
+        return clean(value, digits).toFixed(digits);
+      }
+
+      function complexText(value, unit = '', digits = 2) {
+        const re = clean(value.re, digits);
+        const im = clean(value.im, digits);
+        const sign = im < 0 ? ' − j' : ' + j';
+        return `${numberPL(re, digits)}${sign}${numberPL(Math.abs(im), digits)}${unit ? ` ${unit}` : ''}`;
+      }
+
+      function complexHTML(symbol, value, unit, digits = 2) {
+        return `${symbol} = ${complexText(value, unit, digits)}`;
+      }
+
+      function polarText(value, unit, digits = 2) {
+        return `${numberPL(abs(value), digits)}${unit ? ` ${unit}` : ''} ∠ ${numberPL(angle(value), digits)}°`;
+      }
+
+      function texPolar(value, unit) {
+        return `${numberTex(abs(value))}\\,\\mathrm{${unit}}\\,\\angle\\,${numberTex(angle(value), 2)}^\\circ`;
+      }
+
+      function texComplex(value, unit = '', digits = 3) {
+        const re = clean(value.re, digits);
+        const im = clean(value.im, digits);
+        const sign = im < 0 ? '-' : '+';
+        return `${numberTex(re, digits)} ${sign} j${numberTex(Math.abs(im), digits)}${unit ? `\\,\\mathrm{${unit}}` : ''}`;
+      }
+
+      function calculate(values = settings.values) {
+        for (const key of Object.keys(metadata)) {
+          if (!finiteComplex(values[key])) throw new Error('Wszystkie wartości muszą być skończonymi liczbami.');
+        }
+        const shorted = phases.filter(phase => isZero(values[`Z${phase}`]));
+        const idealNeutral = isZero(values.ZN);
+        if (idealNeutral && shorted.length) {
+          throw new Error('Przy Z_N = 0 zwarcie w fazie jest niedozwolone. Ustaw niezerową impedancję fazową lub neutralną.');
+        }
+        if (shorted.length > 1) throw new Error('Dopuszczalne jest zwarcie tylko jednej fazy jednocześnie.');
+        const shortPhase = shorted[0] || null;
+        const s = { ...values, idealNeutral, shortPhase };
+        phases.forEach(phase => { s[`Y${phase}`] = phase === shortPhase ? null : inv(s[`Z${phase}`]); });
+        if (idealNeutral) {
+          s.Un = c();
+        } else if (shortPhase) {
+          // The short fixes the neutral potential; its current follows from KCL.
+          s.Un = c(s[`E${shortPhase}`].re, s[`E${shortPhase}`].im);
+        } else {
+          const numerator = add(...phases.map(phase => mul(s[`E${phase}`], s[`Y${phase}`])));
+          const denominator = add(...phases.map(phase => s[`Y${phase}`]), inv(s.ZN));
+          s.Un = div(numerator, denominator);
+        }
+        phases.forEach(phase => {
+          s[`U${phase}`] = sub(s[`E${phase}`], s.Un);
+          if (phase !== shortPhase) s[`I${phase}`] = div(s[`U${phase}`], s[`Z${phase}`]);
+        });
+        s.IN = idealNeutral ? add(...phases.map(phase => s[`I${phase}`])) : div(s.Un, s.ZN);
+        if (shortPhase) {
+          const otherCurrents = phases.filter(phase => phase !== shortPhase).map(phase => s[`I${phase}`]);
+          s[`I${shortPhase}`] = sub(s.IN, add(...otherCurrents));
+        }
+        phases.forEach(phase => {
+          const U = s[`U${phase}`], I = s[`I${phase}`];
+          s[`S${phase}`] = mul(U, conj(I));
+          s[`phi${phase}`] = isZero(U) || isZero(I) ? null : normalizedAngle(angle(U) - angle(I));
+        });
+        s.SN = mul(s.Un, conj(s.IN));
+        s.Sload = add(...phases.map(phase => s[`S${phase}`]), s.SN);
+        s.Ssource = add(...phases.map(phase => mul(s[`E${phase}`], conj(s[`I${phase}`]))));
+        s.residual = sub(add(...phases.map(phase => s[`I${phase}`])), s.IN);
+        if (Object.values(s).some(value => value && typeof value === 'object' && !finiteComplex(value))) {
+          throw new Error('Wynik przekracza zakres obliczeń. Sprawdź wartości źródeł i impedancji.');
+        }
+        return s;
+      }
+
+      function normalizedAngle(degrees) {
+        let result = degrees % 360;
+        if (result > 180) result -= 360;
+        if (result <= -180) result += 360;
+        return result;
+      }
+
+      function update() {
+        $('#error-box').style.display = 'none';
+        symbolStyle.value = settings.symbolStyle;
+        updateResistorStyle();
+        updateSchematicLabels();
+        try {
+          solution = calculate();
+          $('#save-latex').disabled = false;
+          $('#copy-latex').disabled = false;
+          updateResults();
+          updateEquations();
+          drawPhasors();
+        } catch (error) {
+          solution = null;
+          $$('.results strong, .results small').forEach(element => { element.textContent = 'Brak wyniku'; });
+          $('#save-latex').disabled = true;
+          $('#copy-latex').disabled = true;
+          $('#phasor-note').textContent = '';
+          $('#error-box').textContent = error.message;
+          $('#error-box').style.display = 'block';
+          $('#equations').innerHTML = `<div class="equation">Nie można wykonać obliczeń. ${error.message}</div>`;
+          drawPhasors();
+        }
+      }
+
+      function updateResistorStyle() {
+        const eu = 'M -60 0 L -28 0 L -28 -12 L 28 -12 L 28 12 L -28 12 L -28 0 M 28 0 L 60 0';
+        const us = 'M -60 0 L -34 0 L -27 -13 L -15 13 L -3 -13 L 9 13 L 21 -13 L 33 0 L 60 0';
+        $$('.resistor-shape').forEach(path => { path.setAttribute('d', settings.symbolStyle === 'us' ? us : eu); });
+        $$('.passive').forEach(group => { group.style.color = group.dataset.color; });
+        $('#schematic').classList.toggle('symbols-us', settings.symbolStyle === 'us');
+      }
+
+      function updateSchematicLabels() {
+        for (const [key, value] of Object.entries(settings.values)) {
+          $(`#value-${key}`).textContent = metadata[key].type === 'source'
+            ? polarText(value, 'V') : complexText(value, metadata[key].unit, 2);
+        }
+      }
+
+      function updateResults() {
+        const s = solution;
+        $('#result-un').innerHTML = complexHTML('U<sub>N</sub>', s.Un, 'V');
+        $('#polar-un').textContent = polarText(s.Un, 'V');
+        $('#result-ua').innerHTML = complexHTML('U<sub>A</sub>', s.UA, 'V');
+        $('#result-ub').innerHTML = complexHTML('U<sub>B</sub>', s.UB, 'V');
+        $('#result-uc').innerHTML = complexHTML('U<sub>C</sub>', s.UC, 'V');
+        $('#result-ia').innerHTML = complexHTML('I<sub>A</sub>', s.IA, 'A');
+        $('#result-ib').innerHTML = complexHTML('I<sub>B</sub>', s.IB, 'A');
+        $('#result-ic').innerHTML = complexHTML('I<sub>C</sub>', s.IC, 'A');
+        $('#result-in').innerHTML = complexHTML('I<sub>N</sub>', s.IN, 'A');
+        $('#kcl-check').textContent = `Błąd KCL: ${numberPL(abs(s.residual), 6)} A`;
+      }
+
+      function equation(label, formula, note = '') {
+        return `<div class="equation"><strong>${label}</strong><br>${formula}${note ? `<span class="note">${note}</span>` : ''}</div>`;
+      }
+
+      function updateEquations() {
+        const s = solution;
+        const rows = [];
+        rows.push(equation('Dane źródeł',
+          phases.map(p => `E<sub>${p}</sub> = ${polarText(s[`E${p}`], 'V')} = ${complexText(s[`E${p}`], 'V')}`).join('<br>'),
+          'Moduł wskazu źródła jest wartością skuteczną napięcia. Kąt podano w stopniach.'));
+        rows.push(equation('Impedancje',
+          [...phases, 'N'].map(p => `Z<sub>${p}</sub> = ${complexText(s[`Z${p}`], 'Ω')}`).join(', &nbsp; ')));
+        rows.push(equation('Admitancje fazowe',
+          phases.filter(p => p !== s.shortPhase).map(p => `Y<sub>${p}</sub> = 1/Z<sub>${p}</sub> = ${complexText(s[`Y${p}`], 'S', 5)}`).join('<br>'),
+          s.shortPhase ? `Gałąź ${s.shortPhase} jest zwarta. Jej potencjał i prąd wyznaczamy bez dzielenia przez zerową impedancję.` : ''));
+        if (s.idealNeutral) {
+          rows.push(equation('Napięcie niesymetrii', 'Z<sub>N</sub> = 0 Ω, zatem U<sub>N</sub> = 0,00 + j0,00 V', 'Punkty O i N pokrywają się. Zwarcie w fazie jest w tym przypadku niedozwolone.'));
+        } else if (s.shortPhase) {
+          rows.push(equation(`Zwarcie w fazie ${s.shortPhase}`,
+            `Z<sub>${s.shortPhase}</sub> = 0 Ω ⇒ N = ${s.shortPhase}<br>U<sub>N</sub> = E<sub>${s.shortPhase}</sub> = ${complexText(s.Un, 'V')}, &nbsp; U<sub>${s.shortPhase}</sub> = 0 V`,
+            'Zwarcie łączy punkt neutralny odbiornika bezpośrednio z zaciskiem tej fazy.'));
+        } else {
+          const numerator = add(...phases.map(p => mul(s[`E${p}`], s[`Y${p}`])));
+          const sumY = add(s.YA, s.YB, s.YC, inv(s.ZN));
+          rows.push(equation('Równanie węzłowe w punkcie N',
+            `U<sub>N</sub> = (E<sub>A</sub>Y<sub>A</sub> + E<sub>B</sub>Y<sub>B</sub> + E<sub>C</sub>Y<sub>C</sub>) / (Y<sub>A</sub> + Y<sub>B</sub> + Y<sub>C</sub> + 1/Z<sub>N</sub>)<br>` +
+            `U<sub>N</sub> = (${complexText(numerator, '', 5)}) / (${complexText(sumY, '', 5)}) = ${complexText(s.Un, 'V')}`));
+        }
+        rows.push(equation('Napięcia na odbiorniku',
+          phases.map(p => `U<sub>${p}</sub> = E<sub>${p}</sub> − U<sub>N</sub> = ${complexText(s[`U${p}`], 'V')} = ${polarText(s[`U${p}`], 'V')}`).join('<br>')));
+        rows.push(equation('Prąd przewodu neutralnego',
+          `I<sub>N</sub> = ${s.idealNeutral ? 'I<sub>A</sub> + I<sub>B</sub> + I<sub>C</sub>' : `U<sub>N</sub>/Z<sub>N</sub> = (${complexText(s.Un)}) / (${complexText(s.ZN)})`} = ${complexText(s.IN, 'A')}`,
+          `Sprawdzenie KCL: |I_A + I_B + I_C − I_N| = ${numberPL(abs(s.residual), 6)} A.`));
+        const order = [...phases.filter(p => p !== s.shortPhase), ...(s.shortPhase ? [s.shortPhase] : [])];
+        rows.push(equation('Prądy fazowe', order.map(p => {
+          const others = phases.filter(q => q !== p);
+          const expression = p === s.shortPhase
+            ? `I<sub>N</sub> − ${others.map(q => `I<sub>${q}</sub>`).join(' − ')} = (${complexText(s.IN)}) − ${others.map(q => `(${complexText(s[`I${q}`])})`).join(' − ')}`
+            : `U<sub>${p}</sub>/Z<sub>${p}</sub> = (${complexText(s[`U${p}`])}) / (${complexText(s[`Z${p}`])})`;
+          return `I<sub>${p}</sub> = ${expression}<br>I<sub>${p}</sub> = ${complexText(s[`I${p}`], 'A')} = ${polarText(s[`I${p}`], 'A')}`;
+        }).join('<br>')));
+        rows.push(equation('Kąty fazowe odbiorników',
+          phases.map(p => s[`phi${p}`] === null ? `φ<sub>${p}</sub>: nieokreślony (zerowe napięcie lub prąd)`
+            : `φ<sub>${p}</sub> = arg(U<sub>${p}</sub>) − arg(I<sub>${p}</sub>) = ${numberPL(s[`phi${p}`])}°`).join('<br>')));
+        rows.push(equation('Moce zespolone elementów biernych',
+          [...phases, 'N'].map(p => `S<sub>${p}</sub> = U<sub>${p}</sub>I<sub>${p}</sub><sup>*</sup> = ${complexText(s[`S${p}`], 'VA')}`).join('<br>')));
+        rows.push(equation('Bilans mocy',
+          `ΣS<sub>elementów</sub> = ${complexText(s.Sload, 'VA')}, &nbsp; ΣS<sub>źródeł</sub> = ${complexText(s.Ssource, 'VA')}`,
+          `Różnica bilansu ma moduł ${numberPL(abs(sub(s.Ssource, s.Sload)), 6)} VA.`));
+        $('#equations').innerHTML = rows.join('');
+      }
+
+      function sizeCanvas() {
+        const bounds = canvas.getBoundingClientRect();
+        const ratio = window.devicePixelRatio || 1;
+        phasorWidth = Math.max(280, bounds.width);
+        phasorHeight = bounds.height;
+        canvas.width = Math.round(phasorWidth * ratio);
+        canvas.height = Math.round(phasorHeight * ratio);
+        ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+        drawPhasors();
+      }
+
+      function line(x1, y1, x2, y2, color, width = 1, dash = []) {
+        ctx.save();
+        ctx.strokeStyle = color;
+        ctx.lineWidth = width;
+        ctx.setLineDash(dash);
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      function arrow(x1, y1, x2, y2, color, width = 2, dash = []) {
+        const distance = Math.hypot(x2 - x1, y2 - y1);
+        if (distance < 1e-7) return;
+        line(x1, y1, x2, y2, color, width, dash);
+        const direction = Math.atan2(y2 - y1, x2 - x1);
+        const length = Math.min(9, distance * .35);
+        ctx.save();
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.moveTo(x2, y2);
+        ctx.lineTo(x2 - length * Math.cos(direction - Math.PI / 6), y2 - length * Math.sin(direction - Math.PI / 6));
+        ctx.lineTo(x2 - length * Math.cos(direction + Math.PI / 6), y2 - length * Math.sin(direction + Math.PI / 6));
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+      }
+
+      function label(text, x, y, color, align = 'left', weight = 650) {
+        ctx.save();
+        ctx.fillStyle = color;
+        ctx.font = `${weight} 12px Segoe UI, Arial`;
+        ctx.textAlign = align;
+        ctx.textBaseline = 'middle';
+        const indexed = /^([UIφ])_([A-Z])$/.exec(text);
+        if (indexed) {
+          const baseWidth = ctx.measureText(indexed[1]).width;
+          const totalWidth = baseWidth + 7;
+          const left = x - (align === 'right' ? totalWidth : align === 'center' ? totalWidth / 2 : 0);
+          ctx.textAlign = 'left';
+          ctx.fillText(indexed[1], left, y);
+          ctx.font = `${weight} 9px Segoe UI, Arial`;
+          ctx.fillText(indexed[2], left + baseWidth, y + 4);
+        } else ctx.fillText(text, x, y);
+        ctx.restore();
+      }
+
+      function drawArc(cx, cy, radius, fromDegrees, toDegrees, color, text) {
+        let delta = normalizedAngle(toDegrees - fromDegrees);
+        const end = fromDegrees + delta;
+        const startRad = -fromDegrees * Math.PI / 180;
+        const endRad = -end * Math.PI / 180;
+        ctx.save();
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(cx, cy, radius, startRad, endRad, delta > 0);
+        ctx.stroke();
+        ctx.restore();
+        const middle = (fromDegrees + delta / 2) * Math.PI / 180;
+        label(text, cx + (radius + 13) * Math.cos(middle), cy - (radius + 13) * Math.sin(middle), color, 'center', 600);
+      }
+
+      function phasorLayout(s, width, height) {
+        const maxVoltage = Math.max(...phases.map(p => abs(s[`E${p}`])), abs(s.Un), 1);
+        const maxCurrent = Math.max(...phases.map(p => abs(s[`I${p}`])), abs(s.IN), 1e-12);
+        const currentRatio = .65 * maxVoltage / maxCurrent;
+        const currentEndpoint = I => add(s.Un, c(I.re * currentRatio, I.im * currentRatio));
+        const endpoints = [c(), s.Un, ...phases.map(p => s[`E${p}`]), ...phases.map(p => currentEndpoint(s[`I${p}`])), currentEndpoint(s.IN)];
+        const minX = Math.min(...endpoints.map(p => p.re)), maxX = Math.max(...endpoints.map(p => p.re));
+        const minY = Math.min(...endpoints.map(p => p.im)), maxY = Math.max(...endpoints.map(p => p.im));
+        const bounds = { left: 40, right: width - 40, top: 32, bottom: height - 62 };
+        const voltageScale = .84 * Math.min((bounds.right - bounds.left) / Math.max(maxX - minX, maxVoltage * .6),
+          (bounds.bottom - bounds.top) / Math.max(maxY - minY, maxVoltage * .6));
+        const project = value => ({
+          x: (bounds.left + bounds.right) / 2 + (value.re - (minX + maxX) / 2) * voltageScale,
+          y: (bounds.top + bounds.bottom) / 2 - (value.im - (minY + maxY) / 2) * voltageScale
+        });
+        return {
+          bounds, voltageScale, currentScale: voltageScale * currentRatio,
+          origin: project(c()), n: project(s.Un), inTip: project(currentEndpoint(s.IN)),
+          phases: phases.map(p => ({ phase: p, U: s[`U${p}`], I: s[`I${p}`], phi: s[`phi${p}`],
+            uTip: project(s[`E${p}`]), iTip: project(currentEndpoint(s[`I${p}`])) }))
+        };
+      }
+
+      function drawPhasors() {
+        if (!phasorWidth || !phasorHeight) return;
+        ctx.clearRect(0, 0, phasorWidth, phasorHeight);
+        if (!solution) { label('Brak poprawnych danych', phasorWidth / 2, phasorHeight / 2, '#a12f38', 'center'); return; }
+        const s = solution;
+        const layout = phasorLayout(s, phasorWidth, phasorHeight);
+        const { origin, n, bounds, voltageScale, currentScale } = layout;
+        line(bounds.left, origin.y, bounds.right, origin.y, '#c7d2da');
+        line(origin.x, bounds.top, origin.x, bounds.bottom, '#c7d2da');
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(bounds.left, bounds.top, bounds.right - bounds.left, bounds.bottom - bounds.top);
+        ctx.clip();
+        ctx.strokeStyle = '#e2e9ee';
+        ctx.lineWidth = 1;
+        const gridRadius = Math.min(bounds.right - bounds.left, bounds.bottom - bounds.top) * .45;
+        for (const ratio of [.5, 1, 1.5]) {
+          ctx.beginPath();
+          ctx.arc(origin.x, origin.y, gridRadius * ratio, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+        ctx.restore();
+        label('Re', bounds.right, origin.y + 15, '#718797', 'right', 500);
+        label('Im', origin.x + 9, bounds.top - 12, '#718797', 'left', 500);
+
+        layout.phases.forEach((item, index) => {
+          const color = colors[item.phase];
+          const { uTip, iTip } = item;
+          arrow(n.x, n.y, iTip.x, iTip.y, color, 2, [6, 4]);
+          arrow(n.x, n.y, uTip.x, uTip.y, color, 2.6);
+          const length = Math.hypot(uTip.x - n.x, uTip.y - n.y);
+          if (length > 1e-7) {
+            label(`U_${item.phase}`, n.x + .64 * (uTip.x - n.x) + (uTip.y - n.y) / length * 13,
+              n.y + .64 * (uTip.y - n.y) - (uTip.x - n.x) / length * 13, color, 'center');
+          }
+          if (!isZero(item.I)) label(`I_${item.phase}`, iTip.x + (item.I.re < 0 ? -9 : 9), iTip.y - 10, color, item.I.re < 0 ? 'right' : 'left');
+          const arcRadius = Math.min(28 + index * 14, length * .45, Math.hypot(iTip.x - n.x, iTip.y - n.y) * .45);
+          if (item.phi !== null && arcRadius > 6) drawArc(n.x, n.y, arcRadius, angle(item.I), angle(item.U), color, `φ_${item.phase}`);
+        });
+        const iNTip = layout.inTip;
+        arrow(n.x, n.y, iNTip.x, iNTip.y, colors.N, 1.8, [4, 4]);
+        if (!isZero(s.IN)) label('I_N', iNTip.x + 9, iNTip.y + 15, colors.N);
+        arrow(origin.x, origin.y, n.x, n.y, colors.N, 3);
+        if (!isZero(s.Un)) {
+          const shortArrow = Math.hypot(n.x - origin.x, n.y - origin.y) < 35;
+          label('U_N', shortArrow ? origin.x - 20 : (origin.x + n.x) / 2,
+            shortArrow ? origin.y - 23 : (origin.y + n.y) / 2 - 19, colors.N, 'center');
+        }
+
+        const nodeGroups = [];
+        [{ name: 'O', point: origin }, { name: 'N', point: n }, ...layout.phases.map(p => ({ name: p.phase, point: p.uTip }))].forEach(node => {
+          const group = nodeGroups.find(g => Math.hypot(g.point.x - node.point.x, g.point.y - node.point.y) < 1e-6);
+          if (group) group.names.push(node.name);
+          else nodeGroups.push({ point: node.point, names: [node.name] });
+        });
+        nodeGroups.forEach(group => {
+          const { point, names } = group;
+          const color = names.includes('N') ? colors.N : colors[names[0]] || '#40596b';
+          ctx.beginPath(); ctx.arc(point.x, point.y, 3, 0, Math.PI * 2); ctx.fillStyle = color; ctx.fill();
+          const left = names.includes('O') || (!names.includes('N') && point.x < origin.x);
+          label(names.join(' = '), point.x + (left ? -10 : 10), point.y + (names.includes('O') ? 18 : -14), color, left ? 'right' : 'left');
+        });
+        label(`Skala napięć: ${numberPL(50 / voltageScale, 1)} V / 50 px`, 12, phasorHeight - 28, '#718797', 'left', 500);
+        label(`Skala prądów: ${numberPL(50 / currentScale, 2)} A / 50 px`, 12, phasorHeight - 11, '#718797', 'left', 500);
+        $('#phasor-note').innerHTML = phases.map(p => `<span style="color:${colors[p]}">φ<sub>${p}</sub>: ${s[`phi${p}`] === null ? 'nieokreślony' : `${numberPL(s[`phi${p}`])}°`}</span>`).join(' · ')
+          + (s.idealNeutral ? ' · O = N, U<sub>N</sub> = 0 V.' : '')
+          + (s.shortPhase ? ` · N = ${s.shortPhase}, U<sub>${s.shortPhase}</sub> = 0 V. Wektor zerowy nie ma kierunku.` : '');
+      }
+
+      function openEditor(key) {
+        activeKey = key;
+        const meta = metadata[key];
+        const value = settings.values[key];
+        $('#editor-title').innerHTML = `Edytuj ${meta.html}`;
+        const isSource = meta.type === 'source';
+        $('#editor-description').textContent = isSource
+          ? 'Podaj wartość skuteczną napięcia i jego kąt fazowy w stopniach.'
+          : 'Podaj R i X dla impedancji Z = R + jX. Wartość 0 + j0 oznacza zwarcie. Zwarcie fazy jest dozwolone tylko przy niezerowym Z_N.';
+        $('#real-label').textContent = isSource ? 'Wartość skuteczna [V]' : 'Rezystancja R [Ω]';
+        $('#imag-label').textContent = isSource ? 'Kąt fazowy [°]' : 'Reaktancja X [Ω]';
+        if (isSource) realInput.min = '0';
+        else realInput.removeAttribute('min');
+        realInput.value = isSource ? Number(abs(value).toPrecision(12)) : value.re;
+        imagInput.value = isSource ? Number(angle(value).toPrecision(12)) : value.im;
+        $('#dialog-error').textContent = '';
+        updateEditorPreview();
+        dialog.showModal();
+        requestAnimationFrame(() => realInput.select());
+      }
+
+      function updateEditorPreview() {
+        if (!activeKey) return;
+        try {
+          const value = readEditorValue();
+          const meta = metadata[activeKey];
+          $('#editor-preview').innerHTML = `${meta.html} = ${meta.type === 'source' ? polarText(value, 'V') : complexText(value, 'Ω')}`;
+        } catch (error) {
+          $('#editor-preview').textContent = error.message;
+        }
+      }
+
+      function readEditorValue() {
+        const first = Number(realInput.value), second = Number(imagInput.value);
+        if (realInput.value.trim() === '' || imagInput.value.trim() === '' || !Number.isFinite(first) || !Number.isFinite(second)) {
+          throw new Error('Wpisz dwie skończone wartości liczbowe.');
+        }
+        if (metadata[activeKey].type === 'source') {
+          if (first < 0) throw new Error('Wartość skuteczna nie może być ujemna.');
+          return fromPolar(first, second);
+        }
+        return c(first, second);
+      }
+
+      function download(name, text, type) {
+        const blob = new Blob([text], { type });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = name;
+        document.body.append(link);
+        link.click();
+        link.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+      }
+
+      function latexDocument() {
+        const s = solution;
+        if (!s) return '';
+        const aligned = rows => `\\begin{align*}\n${rows.join('\\\\\n')}\n\\end{align*}\n`;
+        const bracket = value => `\\left(${texComplex(value)}\\right)`;
+        let neutralRows;
+        if (s.idealNeutral) {
+          neutralRows = ['Z_N &= 0\\,\\Omega \\quad\\Longrightarrow\\quad U_N=0\\,\\mathrm{V},\\quad O=N.'];
+        } else if (s.shortPhase) {
+          neutralRows = [`Z_${s.shortPhase} &= 0\\,\\Omega,\\quad N=${s.shortPhase},\\quad U_${s.shortPhase}=0\\,\\mathrm{V}.`,
+            `U_N &= E_${s.shortPhase}=${texComplex(s.Un, 'V')}.`];
+        } else {
+          const numerator = add(...phases.map(p => mul(s[`E${p}`], s[`Y${p}`])));
+          const denominator = add(s.YA, s.YB, s.YC, inv(s.ZN));
+          neutralRows = ['U_N &= \\frac{E_A/Z_A+E_B/Z_B+E_C/Z_C}{1/Z_A+1/Z_B+1/Z_C+1/Z_N}',
+            `&= \\frac{${texComplex(numerator, '', 5)}}{${texComplex(denominator, '', 5)}}=${texComplex(s.Un, 'V')}.`];
+        }
+        const order = [...phases.filter(p => p !== s.shortPhase), ...(s.shortPhase ? [s.shortPhase] : [])];
+        const currentRows = order.map(p => {
+          const others = phases.filter(q => q !== p);
+          const symbolic = p === s.shortPhase ? `I_N-${others.map(q => `I_${q}`).join('-')}` : `\\frac{U_${p}}{Z_${p}}`;
+          const numeric = p === s.shortPhase
+            ? `${bracket(s.IN)}-${others.map(q => bracket(s[`I${q}`])).join('-')}`
+            : `\\frac{${bracket(s[`U${p}`])}}{${bracket(s[`Z${p}`])}}`;
+          return `I_${p} &= ${symbolic} \\\\\n&= ${numeric} \\\\\n&= ${texComplex(s[`I${p}`], 'A')}.`;
+        });
+        const neutralCurrent = s.idealNeutral
+          ? `I_N &= I_A+I_B+I_C=${texComplex(s.IN, 'A')}.`
+          : `I_N &= \\frac{U_N}{Z_N}=\\frac{${bracket(s.Un)}}{${bracket(s.ZN)}}=${texComplex(s.IN, 'A')}.`;
+        return `\\documentclass[11pt,a4paper]{article}
+\\usepackage[T1]{fontenc}
+\\usepackage[utf8]{inputenc}
+\\usepackage[polish]{babel}
+\\usepackage{amsmath}
+\\usepackage{geometry}
+\\geometry{margin=2.4cm}
+\\title{Obliczenia niesymetrycznego obwodu trójfazowego}
+\\date{}
+\\begin{document}
+\\maketitle
+
+Wartości skuteczne napięć źródłowych i ich kąty fazowe:
+${aligned(phases.map(p => `E_${p} &= ${texPolar(s[`E${p}`], 'V')}=${texComplex(s[`E${p}`], 'V')}.`))}
+Impedancje elementów biernych:
+${aligned([...phases, 'N'].map(p => `Z_${p} &= ${texComplex(s[`Z${p}`], '\\Omega')}.`))}
+Admitancje niezwartych gałęzi:
+${aligned(phases.filter(p => p !== s.shortPhase).map(p => `Y_${p} &= Z_${p}^{-1}=${texComplex(s[`Y${p}`], 'S', 6)}.`))}
+Napięcie niesymetrii:
+${aligned(neutralRows)}
+Napięcia na odbiornikach:
+${aligned(phases.map(p => `U_${p} &= E_${p}-U_N=${bracket(s[`E${p}`])}-${bracket(s.Un)} \\\\\n&= ${texComplex(s[`U${p}`], 'V')}.`))}
+Prąd przewodu neutralnego:
+${aligned([neutralCurrent])}
+Prądy fazowe. ${s.shortPhase ? `Prąd zwartej fazy ${s.shortPhase} wynika z prawa Kirchhoffa.` : ''}
+${aligned(currentRows)}
+Sprawdzenie prawa Kirchhoffa:
+\\[
+|I_A+I_B+I_C-I_N|=${numberTex(abs(s.residual), 6)}\\,\\mathrm{A}.
+\\]
+Kąty fazowe, $\\varphi_k=\\arg U_k-\\arg I_k$ dla niezerowych wskazów:
+${aligned(phases.map(p => `\\varphi_${p} &${s[`phi${p}`] === null ? '\\colon\\quad\\text{nieokreślony (zerowe napięcie lub prąd)}' : `= ${numberTex(s[`phi${p}`], 2)}^\\circ`}.`))}
+Moce zespolone elementów biernych:
+${aligned([...phases, 'N'].map(p => `S_${p} &= U_${p} I_${p}^*=${texComplex(s[`S${p}`], 'VA')}.`))}
+Bilans mocy:
+${aligned([`\\sum S_{\\mathrm{elementow}} &= ${texComplex(s.Sload, 'VA')}.`, `\\sum S_{\\mathrm{zrodel}} &= ${texComplex(s.Ssource, 'VA')}.`])}
+\\[
+\\left|\\sum S_{\\mathrm{zrodel}}-\\sum S_{\\mathrm{elementow}}\\right|=${numberTex(abs(sub(s.Ssource, s.Sload)), 6)}\\,\\mathrm{VA}.
+\\]
+\\end{document}
+`;
+      }
+
+      $$('.element').forEach(element => {
+        element.addEventListener('click', () => openEditor(element.dataset.key));
+        element.addEventListener('keydown', event => {
+          if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); openEditor(element.dataset.key); }
+        });
+      });
+      [realInput, imagInput].forEach(input => input.addEventListener('input', updateEditorPreview));
+      $('#cancel-editor').addEventListener('click', () => dialog.close());
+      editorForm.addEventListener('submit', event => {
+        event.preventDefault();
+        try {
+          const nextValues = { ...settings.values, [activeKey]: readEditorValue() };
+          calculate(nextValues);
+          settings.values = nextValues;
+        } catch (error) {
+          $('#dialog-error').textContent = error.message;
+          return;
+        }
+        dialog.close();
+        storeLocal();
+        update();
+      });
+      symbolStyle.addEventListener('change', () => {
+        settings.symbolStyle = symbolStyle.value;
+        storeLocal('Zapisano wybrany styl symboli');
+        update();
+      });
+      $('#reset').addEventListener('click', () => {
+        settings = clone(defaults);
+        storeLocal('Przywrócono wartości przykładowe');
+        update();
+      });
+      $('#save-json').addEventListener('click', () => download('obwod-trojfazowy-ustawienia.json', JSON.stringify(settings, null, 2), 'application/json;charset=utf-8'));
+      $('#load-json').addEventListener('click', () => $('#json-file').click());
+      $('#json-file').addEventListener('change', async event => {
+        const file = event.target.files[0];
+        if (!file) return;
+        try {
+          const nextSettings = normalizeSettings(JSON.parse(await file.text()));
+          calculate(nextSettings.values);
+          settings = nextSettings;
+          storeLocal('Wczytano ustawienia z pliku JSON');
+          update();
+        } catch (error) {
+          $('#save-status').textContent = `Nie wczytano ustawień: ${error.message}`;
+        }
+        event.target.value = '';
+      });
+      $('#save-latex').addEventListener('click', () => { if (solution) download('obliczenia-obwodu-trojfazowego.tex', latexDocument(), 'application/x-tex;charset=utf-8'); });
+      $('#copy-latex').addEventListener('click', async () => {
+        if (!solution) return;
+        try {
+          await navigator.clipboard.writeText(latexDocument());
+          $('#copy-latex').textContent = 'Skopiowano';
+          setTimeout(() => { $('#copy-latex').textContent = 'Kopiuj LaTeX'; }, 1800);
+        } catch {
+          download('obliczenia-obwodu-trojfazowego.tex', latexDocument(), 'application/x-tex;charset=utf-8');
+        }
+      });
+      if ('ResizeObserver' in window) new ResizeObserver(sizeCanvas).observe(canvas);
+      else window.addEventListener('resize', sizeCanvas);
+      update();
+      sizeCanvas();
+    })();
+  </script>
+</body>
+</html>
