@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Symulacja aktywnych filtrów KHN drugiego rzędu, dobór elementów i odpowiedzi czasowe.">
+  <title>Filtry aktywne KHN drugiego rzędu</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="model.js" defer></script>
+  <script src="app.js" defer></script>
+</head>
+<body>
+<main>
+  <a class="back" href="../">Powrót do programów</a>
+  <header><div><h1>Filtry aktywne KHN</h1><p>Trzy charakterystyki filtru drugiego rzędu i dobór elementów układu.</p></div><span class="tag">działa bez połączenia z internetem</span></header>
+  <div class="layout">
+    <form class="card controls" id="controls" novalidate>
+      <h2>Parametry filtru</h2>
+      <div class="fields">
+        <label>Częstotliwość f₀ [Hz]<input id="f0" type="number" min="0" step="any" value="1000" required></label>
+        <label>Dobroć Q<input id="Q" type="number" min="0" step="any" value="0.7071067811865476" required></label>
+        <label>Wzmocnienie A [V/V]<input id="gain" type="number" min="0" step="any" value="1" required></label>
+        <label>Zadane wzmocnienie<select id="port"><option value="DP">A_DP, tor dolnoprzepustowy</option><option value="SP">A_SP, tor środkowoprzepustowy</option><option value="GP">A_GP, tor górnoprzepustowy</option></select></label>
+        <label class="wide">Przykładowa dobroć<select id="preset"><option value="custom">Własna</option><option value="0.7071067811865476" selected>Butterworth, Q = 1/√2</option><option value="0.5773502691896258">Bessel, Q = 1/√3</option><option value="0.5">Tłumienie krytyczne, Q = 0,5</option><option value="0.3">Odpowiedź aperiodyczna, Q = 0,3</option><option value="5">Rezonans, Q = 5</option></select></label>
+      </div>
+      <p class="muted">A_DP określa wzmocnienie dla f = 0, A_SP dla f = f₀, a A_GP dla f dążącej do nieskończoności. f₀ jest częstotliwością własną, nie zawsze częstotliwością graniczną.</p>
+      <fieldset><legend>Realizacja fizyczna</legend><div class="fields">
+        <label class="wide">Wariant wejścia sumatora<select id="variant"><option value="inverting">Odwracający, rys. 1</option><option value="noninverting">Nieodwracający, rys. 2</option></select></label>
+        <label>R [kΩ]<input id="R" type="number" min="0" step="any" value="20" required></label>
+        <label>C [nF]<input id="C" type="number" min="0" step="any" value="10" required></label>
+        <label class="wide">Faza i odpowiedzi czasowe<select id="convention"><option value="physical">Polaryzacja wyjść ze schematu</option><option value="normalized">Transmitancje znormalizowane</option></select></label>
+      </div></fieldset>
+      <fieldset><legend>Zakres częstotliwości</legend><div class="fields">
+        <label class="wide">Oś częstotliwości<select id="scale"><option value="log">Logarytmiczna</option><option value="linear">Liniowa</option></select></label>
+        <label>Od [Hz]<input id="fmin" type="number" min="0" step="any" value="10" required></label>
+        <label>Do [Hz]<input id="fmax" type="number" min="0" step="any" value="100000" required></label>
+        <label class="check wide"><input id="autoF" type="checkbox" checked>Automatyczny zakres</label>
+      </div></fieldset>
+      <fieldset><legend>Odpowiedzi czasowe</legend><div class="fields">
+        <label>Czas końcowy [ms]<input id="tmax" type="number" min="0" step="any" value="3.1511" required></label>
+        <label class="check"><input id="autoT" type="checkbox" checked>Dobierz czas</label>
+      </div></fieldset>
+      <div class="buttons"><button class="primary" type="submit">Oblicz i rysuj</button><button type="button" id="reset">Domyślne</button></div>
+      <p id="notice" class="notice" role="alert"></p>
+    </form>
+    <div class="content" id="results">
+      <section class="summary" aria-label="Wyniki obliczeń">
+        <div class="card metric"><small>A_DP = A_GP [V/V]</small><strong id="gainResult"></strong></div>
+        <div class="card metric"><small>A_SP [V/V]</small><strong id="bandResult"></strong></div>
+        <div class="card metric"><small>Pasmo SP, f_H − f_L</small><strong id="bandwidth"></strong></div>
+        <div class="card metric"><small>Tłumienie względne ζ</small><strong id="damping"></strong></div>
+      </section>
+      <section class="card panel">
+        <div class="heading"><h2>Charakterystyki i odpowiedzi</h2><span>wskaż punkt na wykresie</span></div>
+        <div class="legend" aria-label="Widoczne tory">
+          <label class="check dp"><input type="checkbox" data-port="DP" checked>DP, dolnoprzepustowy</label>
+          <label class="check sp"><input type="checkbox" data-port="SP" checked>SP, środkowoprzepustowy</label>
+          <label class="check gp"><input type="checkbox" data-port="GP" checked>GP, górnoprzepustowy</label>
+        </div>
+        <p class="muted" id="conventionNote"></p>
+      </section>
+      <section class="charts" aria-label="Wykresy">
+        <article class="card chart"><h2>Charakterystyka amplitudowa |T(jω)| [V/V]</h2><canvas id="amplitude" role="img" aria-label="Charakterystyka amplitudowa trzech torów KHN"></canvas><p class="readout" id="amplitudeReadout"></p></article>
+        <article class="card chart"><h2>Charakterystyka amplitudowa [dB]</h2><canvas id="db" role="img" aria-label="Charakterystyka amplitudowa w decybelach"></canvas><p class="readout" id="dbReadout"></p></article>
+        <article class="card chart full"><h2>Charakterystyka fazowa [°]</h2><canvas id="phase" role="img" aria-label="Charakterystyka fazowa trzech torów KHN"></canvas><p class="readout" id="phaseReadout"></p></article>
+        <article class="card chart"><h2>Odpowiedź na skok jednostkowy y(t)</h2><canvas id="step" role="img" aria-label="Odpowiedź na skok jednostkowy"></canvas><p class="readout" id="stepReadout"></p></article>
+        <article class="card chart"><h2>Odpowiedź impulsowa h(t) [s⁻¹]</h2><canvas id="impulse" role="img" aria-label="Zwykła część odpowiedzi impulsowej"></canvas><p class="readout" id="impulseReadout"></p></article>
+      </section>
+      <section class="card panel">
+        <div class="heading"><h2>Elementy realizacji KHN</h2><span id="hardwareStatus"></span></div>
+        <p class="note" id="hardwareNote"></p>
+        <div class="table-wrap"><table><thead><tr><th>Element</th><th>Wartość</th><th>Zależność</th></tr></thead><tbody id="elements"></tbody></table></div>
+        <details open><summary>Schemat z obliczonymi wartościami</summary><div class="schematic-wrap" id="schematic"></div></details>
+        <p class="note">Model zakłada idealne wzmacniacze operacyjne i równe elementy integratorów. Dobór nie uwzględnia pasma wzmacniaczy, ograniczenia napięcia, tolerancji ani wartości z szeregu handlowego.</p>
+      </section>
+      <section class="card panel">
+        <div class="heading"><h2>Transmitancje i wzory odpowiedzi</h2><span id="responseType"></span></div>
+        <div id="commonFormula" class="formula"></div>
+        <div class="equation-grid" id="transfers"></div>
+        <details open><summary>Odpowiedzi impulsowe i skokowe</summary><div id="timeFormulas"></div></details>
+        <details><summary>Charakterystyki amplitudowe i fazowe</summary><div id="frequencyFormulas"></div></details>
+        <p class="note">Wzory czasowe obowiązują dla t ≥ 0 i zerowych warunków początkowych. δ(t) oznacza impuls Diraca. Wykres h_GP pokazuje część zwykłą, a współczynnik impulsu jest podany pod wykresem.</p>
+        <div class="buttons"><button id="exportTex" type="button">Eksport obliczeń do LaTeX</button><button id="exportCsv" type="button">Eksport wykresów CSV</button></div>
+      </section>
+    </div>
+  </div>
+  <footer>Wzory doboru elementów i oznaczenia: <a href="https://termotesty.pl/KHN/khn_1.html" target="_blank" rel="noopener">schematy KHN</a>. Punkt odniesienia: <a href="https://termotesty.pl/KHN/khn_ah.html" target="_blank" rel="noopener">VIRTUAL KHN</a>.</footer>
+</main>
+</body>
+</html>

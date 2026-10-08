@@ -26,10 +26,14 @@ jobs:
         uses: actions/checkout@v6
       - name: Konfiguracja GitHub Pages
         uses: actions/configure-pages@v5
+      - name: Sprawdzenie symulatora KHN
+        run: |
+          node khn/model.test.js
+          node khn/app.test.js
       - name: Przygotowanie publicznych plików
         shell: bash
         run: |
-          mkdir -p _site/{wektor_wirujacy,trojfazowy,prostokatny,suma_harmonicznych,charakterystyki,obwod_trojfazowy}
+          mkdir -p _site/{wektor_wirujacy,trojfazowy,prostokatny,suma_harmonicznych,charakterystyki,obwod_trojfazowy,khn}
           cp index.html _site/index.html
           cp wektor_wirujacy/index.html _site/wektor_wirujacy/index.html
           cp trojfazowy/index.html _site/trojfazowy/index.html
@@ -37,6 +41,7 @@ jobs:
           cp suma_harmonicznych/index.html _site/suma_harmonicznych/index.html
           cp charakterystyki/index.html _site/charakterystyki/index.html
           cp obwod_trojfazowy/index.html _site/obwod_trojfazowy/index.html
+          cp khn/{index.html,style.css,model.js,app.js} _site/khn/
           touch _site/.nojekyll
       - name: Przekazanie plików strony
         uses: actions/upload-pages-artifact@v4
