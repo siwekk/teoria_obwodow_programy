@@ -119,9 +119,9 @@
     $('hardwareNote').textContent = m.hardwareOK ? 'R₁ = R₂ = R₄ = R oraz C₁ = C₂ = C. Wartości poniżej dotyczą wybranego wariantu wejścia.' : `Dla tego wariantu wymagane jest Q > ${fmt(boundary)}, czyli ${m.variant === 'inverting' ? '2Q + A_SP − 1' : '2Q − A_SP − 1'} > 0. R_Q nie ma dodatniej, skończonej wartości. Wykresy opisują zadany filtr idealny, ale wskazany schemat nie realizuje tych parametrów.`;
     const rows = [
       ['R₁, R₂, R₄', resistance(m.R), 'R'], ['C₁, C₂', `${fmt(m.C * 1e9)} nF`, 'C'],
-      ['R_f1, R_f2', resistance(m.Rf), S`R_f = \frac{1}{2\pi f_0 C}`],
-      [m.variant === 'inverting' ? 'R_G1' : 'R_G2', resistance(m.RG), m.variant === 'inverting' ? S`R_{G1}=\frac{R}{A_{GP}}` : S`R_{G2}=\frac{R}{A_{SP}}`],
-      ['R_Q', resistance(m.RQ), m.variant === 'inverting' ? S`R_Q=\frac{R}{2Q+A_{SP}-1}` : S`R_Q=\frac{R}{2Q-A_{SP}-1}`]
+      ['R<sub>f1</sub>, R<sub>f2</sub>', resistance(m.Rf), S`R_f = \frac{1}{2\pi f_0 C}`],
+      [m.variant === 'inverting' ? 'R<sub>G1</sub>' : 'R<sub>G2</sub>', resistance(m.RG), m.variant === 'inverting' ? S`R_{G1}=\frac{R}{A_{GP}}` : S`R_{G2}=\frac{R}{A_{SP}}`],
+      ['R<sub>Q</sub>', resistance(m.RQ), m.variant === 'inverting' ? S`R_Q=\frac{R}{2Q+A_{SP}-1}` : S`R_Q=\frac{R}{2Q-A_{SP}-1}`]
     ];
     $('elements').innerHTML = rows.map(([label, val, formula]) => `<tr><td>${label}</td><td>${val}</td><td>${math(formula)}</td></tr>`).join('');
     const x = 1 / (2 * m.Q), fL = m.f0 / (Math.sqrt(1 + x * x) + x), fH = m.f0 * (Math.sqrt(1 + x * x) + x);
@@ -266,9 +266,6 @@ ${report.map(tex=>'\\['+tex+'\\]').join('\n')}
 Time responses hold for $t\ge 0$. The high-pass impulse response includes
 $k_{GP}\delta(t)$; only its ordinary part is drawn. Phase is undefined at
 zero magnitude. Phase formulas use radians, plots use degrees.
-\section*{References}
-Implementation equations: \url{https://termotesty.pl/KHN/khn_1.html}.
-Reference simulator: \url{https://termotesty.pl/KHN/khn_ah.html}.
 \end{document}
 `;
     download(doc,'application/x-tex;charset=utf-8','khn_obliczenia.tex');
